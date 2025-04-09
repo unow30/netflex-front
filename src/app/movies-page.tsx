@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
 import { movieService } from '../services';
-import { MovieListResponseDto } from '../types';
+import { MovieListItemDto, MovieListResponseDto } from '../types';
 
 export const MoviesPage = () => {
-  const [movies, setMovies] = useState<MovieListResponseDto[]>([]);
+  const [movies, setMovies] = useState<MovieListItemDto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,7 +15,10 @@ export const MoviesPage = () => {
     const fetchMovies = async () => {
       try {
         const result = await movieService.getMovies();
-        setMovies(result);
+        console.log('result', result);
+        setMovies(result.data);
+        setNextCursor(result.nextCursor);
+        setTotalCount(result.count);
       } catch (err) {
         setError('영화 목록을 불러오는데 실패했습니다.');
         console.error(err);
@@ -24,6 +29,22 @@ export const MoviesPage = () => {
 
     fetchMovies();
   }, []);
+
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    
+    try {
+      setLoading(true);
+      const result = await movieService.getMovies({ cursor: nextCursor });
+      setMovies(prev => [...prev, ...result.data]);
+      setNextCursor(result.nextCursor);
+    } catch (err) {
+      setError('추가 영화를 불러오는데 실패했습니다.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Layout>
@@ -49,10 +70,10 @@ export const MoviesPage = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300">
                   <div className="h-64 bg-gray-200 dark:bg-gray-700">
                     {movie.movieFileName ? (
-                      <img
-                        src={`http://localhost:3000/api/common/video/thumbnail/${movie.movieFileName}`}
-                        alt={movie.title}
+                      <video
+                        src={movie.movieFileName}
                         className="w-full h-full object-cover"
+                        controls
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -62,22 +83,32 @@ export const MoviesPage = () => {
                   </div>
                   <div className="p-4">
                     <h2 className="text-xl font-semibold mb-2 dark:text-white">{movie.title}</h2>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-2">{movie.detail}</p>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {movie.genres.map(genre => (
+                      {movie.genres?.map(genre => (
                         <span key={genre.id} className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100 text-xs px-2 py-1 rounded">
                           {genre.name}
                         </span>
                       ))}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      <p>감독: {movie.director.name}</p>
+                      <p>감독: {movie.director?.name || '정보 없음'}</p>
                       <p>좋아요: {movie.likeCount}</p>
                     </div>
                   </div>
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+        
+        {nextCursor && (
+          <div className="mt-6 text-center">
+            <button 
+              onClick={loadMore}
+              disabled={loading}
+              className="bg-red-700 hover:bg-red-800 text-white px-6 py-2 rounded disabled:opacity-50">
+              {loading ? '로딩 중...' : '더 보기'} 
+            </button>
           </div>
         )}
       </div>

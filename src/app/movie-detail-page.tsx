@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
 import { movieService } from '../services';
-import { Movie } from '../types';
+import { MovieDto } from '../types';
 
 export const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [movie, setMovie] = useState<Movie | null>(null);
+  const [movie, setMovie] = useState<MovieDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -126,14 +126,14 @@ export const MovieDetailPage = () => {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            {/* <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 추가 날짜: {new Date(movie.createdAt).toLocaleDateString()}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 업데이트 날짜: {new Date(movie.updatedAt).toLocaleDateString()}
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

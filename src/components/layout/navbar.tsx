@@ -12,8 +12,9 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="bg-red-700 dark:bg-black px-6 py-3 shadow-md fixed w-full z-10">
-      <div className="max-w-screen-xl mx-auto flex items-center justify-between">
+    // <nav className="bg-red-700 dark:bg-black px-6 py-3 flex justify-center shadow-md fixed w-full z-10">
+    <nav className="bg-red-700 dark:bg-black px-6 py-3 flex justify-center shadow-md max-w-screen-xl mx-auto z-10">
+      <div className="max-w-screen-xl mx-auto flex items-center justify-start space-x-6">
         <div className="flex items-center">
           <Link to="/" className="text-white text-2xl font-bold">NETFLEX</Link>
         </div>
