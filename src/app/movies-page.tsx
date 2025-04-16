@@ -1,24 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
-import { movieService } from '../services';
-import { MovieListItemDto, MovieListResponseDto } from '../types';
+import { MovieDto } from '../types';
 
 export const MoviesPage = () => {
-  const [movies, setMovies] = useState<MovieListItemDto[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState<number>(0);
+  const [movies, setMovies] = useState<MovieDto[]>([]);
+  const [filteredMovies, setFilteredMovies] = useState<MovieDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchMovies = async () => {
       try {
+        // 동적으로 서비스 로드
+        const { movieService } = await import('../services/movie.service');
         const result = await movieService.getMovies();
-        console.log('result', result);
-        setMovies(result.data);
-        setNextCursor(result.nextCursor);
-        setTotalCount(result.count);
+        // 응답 형식에 따라 데이터 설정
+        if (result.data) {
+          setMovies(result.data);
+          setFilteredMovies(result.data);
+        } else {
+          setMovies(result as any);
+          setFilteredMovies(result as any);
+        }
       } catch (err) {
         setError('영화 목록을 불러오는데 실패했습니다.');
         console.error(err);
@@ -30,88 +35,103 @@ export const MoviesPage = () => {
     fetchMovies();
   }, []);
 
-  const loadMore = async () => {
-    if (!nextCursor) return;
-    
-    try {
-      setLoading(true);
-      const result = await movieService.getMovies({ cursor: nextCursor });
-      setMovies(prev => [...prev, ...result.data]);
-      setNextCursor(result.nextCursor);
-    } catch (err) {
-      setError('추가 영화를 불러오는데 실패했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = e.target.value;
+    setSearchTerm(searchValue);
+
+    if (searchValue.trim() === '') {
+      setFilteredMovies(movies);
+    } else {
+      // 프론트엔드에서 검색 처리
+      const filtered = movies.filter(movie => 
+        movie.title.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredMovies(filtered);
     }
   };
 
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <p>로딩 중...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 p-4 rounded mb-6">
+          {error}
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold mb-6">영화 목록</h1>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>로딩 중...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 p-4 rounded mb-6">
-            {error}
-          </div>
-        ) : movies.length === 0 ? (
-          <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded text-center">
-            <p>등록된 영화가 없습니다.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {movies.map(movie => (
-              <Link key={movie.id} to={`/movies/${movie.id}`}>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                  <div className="h-64 bg-gray-200 dark:bg-gray-700">
-                    {movie.movieFileName ? (
-                      <video
-                        src={movie.movieFileName}
-                        className="w-full h-full object-cover"
-                        controls
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                        이미지 없음
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h2 className="text-xl font-semibold mb-2 dark:text-white">{movie.title}</h2>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {movie.genres?.map(genre => (
-                        <span key={genre.id} className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100 text-xs px-2 py-1 rounded">
-                          {genre.name}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      <p>감독: {movie.director?.name || '정보 없음'}</p>
-                      <p>좋아요: {movie.likeCount}</p>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-        
-        {nextCursor && (
-          <div className="mt-6 text-center">
-            <button 
-              onClick={loadMore}
-              disabled={loading}
-              className="bg-red-700 hover:bg-red-800 text-white px-6 py-2 rounded disabled:opacity-50">
-              {loading ? '로딩 중...' : '더 보기'} 
-            </button>
-          </div>
-        )}
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-3xl font-bold">영화 목록</h1>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="영화 검색..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="bg-white dark:bg-gray-700 rounded-full px-4 py-2 pl-10 w-64 focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+          <svg
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+          </svg>
+        </div>
       </div>
+
+      {filteredMovies.length === 0 ? (
+        <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded text-center">
+          <p>검색 결과가 없습니다.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredMovies.map(movie => (
+            <Link 
+              key={movie.id} 
+              to={`/movies/${movie.id}`}
+              className="block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
+            >
+              <div className="aspect-video bg-gray-200 dark:bg-gray-700">
+                {movie.movieFileName ? (
+                  <img 
+                    src={movie.movieFileName}
+                    alt={movie.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    이미지 없음
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h2 className="text-lg font-semibold mb-1">{movie.title}</h2>
+                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{movie.detail}</p>
+                {movie.director && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+                    감독: {movie.director.name}
+                  </p>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </Layout>
   );
 }; 

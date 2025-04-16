@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
-import { directorService } from '../services';
 import { Director } from '../types';
+
+interface MovieInfo {
+  id: number;
+  title: string;
+}
+
+interface DirectorWithMovies extends Director {
+  movies?: MovieInfo[];
+}
 
 export const DirectorDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [director, setDirector] = useState<Director | null>(null);
+  const [director, setDirector] = useState<DirectorWithMovies | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,6 +23,8 @@ export const DirectorDetailPage = () => {
       if (!id) return;
       
       try {
+        // 동적으로 서비스 로드
+        const { directorService } = await import('../services/director.service');
         const result = await directorService.getDirector(parseInt(id));
         setDirector(result);
       } catch (err) {
@@ -59,22 +69,28 @@ export const DirectorDetailPage = () => {
             ← 감독 목록으로 돌아가기
           </Link>
         </div>
-
+        
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-8">
+          <div className="p-6">
             <h1 className="text-3xl font-bold mb-4">{director.name}</h1>
-            <div className="prose dark:prose-invert max-w-none mb-8">
-              <p className="text-gray-600 dark:text-gray-300">{director.description}</p>
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                추가 날짜: {new Date(director.createdAt).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                업데이트 날짜: {new Date(director.updatedAt).toLocaleDateString()}
-              </p>
-            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{director.description}</p>
+            
+            <h2 className="text-xl font-semibold mb-3">작품</h2>
+            {director.movies && director.movies.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {director.movies.map((movie: MovieInfo) => (
+                  <Link
+                    key={movie.id}
+                    to={`/movies/${movie.id}`}
+                    className="block bg-gray-100 dark:bg-gray-700 rounded p-3 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  >
+                    <h3 className="font-medium">{movie.title}</h3>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400">등록된 영화가 없습니다.</p>
+            )}
           </div>
         </div>
       </div>

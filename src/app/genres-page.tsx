@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
-import { genreService } from '../services';
 import { Genre } from '../types';
 
 export const GenresPage = () => {
@@ -12,6 +11,8 @@ export const GenresPage = () => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
+        // 동적으로 서비스 로드
+        const { genreService } = await import('../services/genre.service');
         const result = await genreService.getGenres();
         setGenres(result);
       } catch (err) {
@@ -25,35 +26,43 @@ export const GenresPage = () => {
     fetchGenres();
   }, []);
 
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <p>로딩 중...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 p-4 rounded">
+          {error}
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold mb-6">장르 목록</h1>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>로딩 중...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 p-4 rounded mb-6">
-            {error}
-          </div>
-        ) : genres.length === 0 ? (
-          <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded text-center">
-            <p>등록된 장르가 없습니다.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {genres.map(genre => (
-              <Link key={genre.id} to={`/genres/${genre.id}`}>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-300">
-                  <h2 className="text-xl font-semibold mb-3 dark:text-white">{genre.name}</h2>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">{genre.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <h1 className="text-3xl font-bold mb-6">장르 목록</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {genres.map(genre => (
+          <Link 
+            key={genre.id}
+            to={`/genres/${genre.id}`}
+            className="block bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
+          >
+            <div className="p-4">
+              <h2 className="text-xl font-semibold">{genre.name}</h2>
+              <p className="text-gray-600 dark:text-gray-300 line-clamp-3 mt-2">{genre.description}</p>
+            </div>
+          </Link>
+        ))}
       </div>
     </Layout>
   );

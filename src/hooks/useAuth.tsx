@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { authService } from '../services';
 import { isTokenExpired } from '../services/api';
 
 interface AuthContextType {
@@ -24,17 +23,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = localStorage.getItem('accessToken');
         
         if (token && !isTokenExpired(token)) {
+          // 동적으로 authService 로드
+          const { authService } = await import('../services/auth.service');
           const userData = await authService.getMe();
           setUser(userData);
         } else {
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken) {
             try {
+              // 동적으로 authService 로드
+              const { authService } = await import('../services/auth.service');
               const { accessToken } = await authService.refreshToken(refreshToken);
               localStorage.setItem('accessToken', accessToken);
               const userData = await authService.getMe();
               setUser(userData);
             } catch (error) {
+              // 동적으로 authService 로드
+              const { authService } = await import('../services/auth.service');
               authService.logout();
             }
           }
@@ -52,6 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
+      // 동적으로 authService 로드
+      const { authService } = await import('../services/auth.service');
       await authService.login(email, password);
       const userData = await authService.getMe();
       setUser(userData);
@@ -60,7 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // 동적으로 authService 로드
+    const { authService } = await import('../services/auth.service');
     authService.logout();
     setUser(null);
   };
@@ -68,6 +77,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (email: string, password: string) => {
     setLoading(true);
     try {
+      // 동적으로 authService 로드
+      const { authService } = await import('../services/auth.service');
       await authService.register({ email, password });
       await login(email, password);
     } finally {

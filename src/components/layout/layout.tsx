@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { Navbar } from './navbar';
+import React, { useEffect, Suspense } from 'react';
+// Navbar를 지연 로딩으로 변경
+const Navbar = React.lazy(() => import('./navbar').then(module => ({ default: module.Navbar })));
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,7 +19,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 dark:text-white transition-colors duration-200">
-      <Navbar />
+      <Suspense fallback={<div className="h-16 bg-red-700 dark:bg-black"></div>}>
+        <Navbar />
+      </Suspense>
       <div className="pt-16 pb-8">
         <main className="max-w-screen-xl mx-auto p-4">
           {children}

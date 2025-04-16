@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
-import { movieService } from '../services';
 import { MovieDto } from '../types';
 
 export const MovieDetailPage = () => {
@@ -16,6 +15,8 @@ export const MovieDetailPage = () => {
       if (!id) return;
       
       try {
+        // 동적으로 서비스 로드
+        const { movieService } = await import('../services/movie.service');
         const result = await movieService.getMovie(parseInt(id));
         setMovie(result);
       } catch (err) {
@@ -34,6 +35,8 @@ export const MovieDetailPage = () => {
     
     setLikeLoading(true);
     try {
+      // 동적으로 서비스 로드
+      const { movieService } = await import('../services/movie.service');
       const updatedMovie = await movieService.likeMovie(parseInt(id));
       setMovie(updatedMovie);
     } catch (err) {
@@ -80,9 +83,9 @@ export const MovieDetailPage = () => {
             <video
               controls
               className="w-full h-full"
-              poster={`http://localhost:3000/api/common/video/thumbnail/${movie.movieFileName}`}
+              poster={`${movie.movieFileName}`}
             >
-              <source src={`http://localhost:3000/api/common/video/${movie.movieFileName}`} type="video/mp4" />
+              <source src={`${movie.movieFileName}`} type="video/mp4" />
               브라우저가 비디오 태그를 지원하지 않습니다.
             </video>
           </div>
@@ -95,7 +98,7 @@ export const MovieDetailPage = () => {
                 disabled={likeLoading}
                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
               >
-                {likeLoading ? '처리 중...' : `좋아요 (${movie.likes.length})`}
+                {likeLoading ? '처리 중...' : `좋아요 (${movie.likeCount?? 0})`}
               </button>
             </div>
 
