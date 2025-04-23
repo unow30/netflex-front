@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Role } from '../../types/user';
 
-export const Navbar = () => {
+export const Navbar = React.memo(() => {
   const { user, logout, isAuthenticated } = useAuth();
   
   const toggleDarkMode = () => {
@@ -11,9 +11,8 @@ export const Navbar = () => {
     const isDark = document.documentElement.classList.contains('dark');
     localStorage.setItem('darkMode', isDark ? 'dark' : 'light');
   };
-  console.log('user, user.role, Role.Admin', user, user?.role, Role.admin);
-  // 관리자 권한 확인 (role이 ADMIN인 경우)
-  const isAdmin = user && user.role === Role.admin;
+  // 관리자 권한 확인 (role이 admin인 경우) - useMemo로 최적화
+  const isAdmin = useMemo(() => user && user.role === Role.admin, [user]);
 
   return (
     // <nav className="bg-red-700 dark:bg-black px-6 py-3 flex justify-center shadow-md fixed w-full z-10">
@@ -72,4 +71,4 @@ export const Navbar = () => {
       </div>
     </nav>
   );
-};
+});
