@@ -268,8 +268,7 @@ export const AdminPage = () => {
       };
       
       // 영화 데이터 서버에 전송
-      const { movieService } = await import('../services/movie.service');
-      await movieService.createMovie(movieData);
+      const response = await api.post('movie', { json: movieData }).json<ApiResponse<any>>();
       
       setUploadSuccess(true);
       // 폼 초기화
