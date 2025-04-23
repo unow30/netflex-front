@@ -138,8 +138,6 @@ export const AdminPage = () => {
           'Content-Type': 'video/mp4',
         }
       });
-      console.log('url', url);
-      console.log('response', response);
 
       if (!response.ok) {
         throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
