@@ -1,10 +1,25 @@
 import React, { useState } from 'react';
 import { Layout } from '../components/layout/layout';
 import { useAuth } from '../hooks/useAuth';
+import { Role } from '../types/user';
 
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  // 사용자 역할에 따른 텍스트 표시 함수
+  const getRoleText = (role: Role) => {
+    switch (role) {
+      case Role.admin:
+        return '관리자';
+      case Role.paidUser:
+        return '유료 회원';
+      case Role.user:
+        return '일반 회원';
+      default:
+        return '알 수 없음';
+    }
+  };
 
   const handleLogout = () => {
     if (confirmLogout) {
@@ -32,7 +47,7 @@ export const ProfilePage = () => {
               
               <div>
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">역할</h2>
-                <p className="mt-1 text-lg capitalize">{user.role}</p>
+                <p className="mt-1 text-lg">{getRoleText(user.role)}</p>
               </div>
               
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -53,4 +68,4 @@ export const ProfilePage = () => {
       </div>
     </Layout>
   );
-}; 
+};

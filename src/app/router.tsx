@@ -12,6 +12,7 @@ const DirectorsPage = React.lazy(() => import('./directors-page').then(module =>
 const DirectorDetailPage = React.lazy(() => import('./director-detail-page').then(module => ({ default: module.DirectorDetailPage })));
 const GenresPage = React.lazy(() => import('./genres-page').then(module => ({ default: module.GenresPage })));
 const GenreDetailPage = React.lazy(() => import('./genre-detail-page').then(module => ({ default: module.GenreDetailPage })));
+const AdminPage = React.lazy(() => import('./admin-page').then(module => ({ default: module.AdminPage })));
 const ProfilePage = React.lazy(() => import('./profile-page').then(module => ({ default: module.ProfilePage })));
 const NotFoundPage = React.lazy(() => import('./not-found-page').then(module => ({ default: module.NotFoundPage })));
 
@@ -51,6 +52,7 @@ export const AppRouter = () => {
         <Route path="/directors/:id" element={<ProtectedRoute><DirectorDetailPage /></ProtectedRoute>} />
         <Route path="/genres" element={<ProtectedRoute><GenresPage /></ProtectedRoute>} />
         <Route path="/genres/:id" element={<ProtectedRoute><GenreDetailPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

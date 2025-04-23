@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { Role } from '../../types/user';
 
 export const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -10,6 +11,9 @@ export const Navbar = () => {
     const isDark = document.documentElement.classList.contains('dark');
     localStorage.setItem('darkMode', isDark ? 'dark' : 'light');
   };
+  console.log('user, user.role, Role.Admin', user, user?.role, Role.admin);
+  // 관리자 권한 확인 (role이 ADMIN인 경우)
+  const isAdmin = user && user.role === Role.admin;
 
   return (
     // <nav className="bg-red-700 dark:bg-black px-6 py-3 flex justify-center shadow-md fixed w-full z-10">
@@ -23,6 +27,13 @@ export const Navbar = () => {
           <Link to="/movies" className="text-white hover:text-red-300">영화</Link>
           <Link to="/directors" className="text-white hover:text-red-300">감독</Link>
           <Link to="/genres" className="text-white hover:text-red-300">장르</Link>
+          
+          {/* 관리자 권한이 있는 경우에만 관리자 버튼 표시 */}
+          {isAdmin && (
+            <Link to="/admin" className="text-white hover:text-red-300 bg-red-800 dark:bg-gray-800 p-2 rounded hover:bg-red-900">
+              관리자
+            </Link>
+          )}
           
           <button 
             onClick={toggleDarkMode}
@@ -61,4 +72,4 @@ export const Navbar = () => {
       </div>
     </nav>
   );
-}; 
+};
