@@ -132,14 +132,15 @@ export const AdminPage = () => {
           'Content-Type': 'video/mp4',
         }
       });
-      
+      console.log('url',url)
+      console.log('response',response)
+
       if (!response.ok) {
         throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
       }
       
       // 성공시 1 리턴 예상
-      const result = await response.json();
-      return result === 1;
+      return response.ok;
     } catch (error) {
       console.error('S3 파일 업로드 실패:', error);
       throw error;
