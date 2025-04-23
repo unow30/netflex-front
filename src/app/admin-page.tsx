@@ -17,6 +17,10 @@ export const AdminPage = () => {
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   
+  // S3 업로드 상태
+  const [s3UploadComplete, setS3UploadComplete] = useState<boolean>(false);
+  const [s3FileName, setS3FileName] = useState<string>('');
+  
   // 영화 정보 상태
   const [title, setTitle] = useState<string>('');
   const [detail, setDetail] = useState<string>('');
@@ -54,6 +58,8 @@ export const AdminPage = () => {
     const files = e.target.files;
     setErrorMessage('');
     setUploadProgress(0);
+    setS3UploadComplete(false);
+    setS3FileName('');
     
     if (!files || files.length === 0) {
       setSelectedFile(null);
@@ -116,7 +122,7 @@ export const AdminPage = () => {
       
       throw new Error('프리사인드 URL을 받아오는데 실패했습니다.');
     } catch (error) {
-      console.error('프리사인드 URL 요청 실패:', error);
+      console.error('URL 요청 실패:', error);
       throw error;
     }
   };
@@ -132,14 +138,14 @@ export const AdminPage = () => {
           'Content-Type': 'video/mp4',
         }
       });
-      console.log('url',url)
-      console.log('response',response)
+      console.log('url', url);
+      console.log('response', response);
 
       if (!response.ok) {
         throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
       }
       
-      // 성공시 1 리턴 예상
+      // 성공시 true 리턴
       return response.ok;
     } catch (error) {
       console.error('S3 파일 업로드 실패:', error);
@@ -147,15 +153,94 @@ export const AdminPage = () => {
     }
   };
 
-  // 영화 업로드 처리
-  const handleUpload = async () => {
+  // 프리사인드 URL에서 S3 파일명 추출
+  const extractS3FileNameFromUrl = (url: string): string => {
+    try {
+      // URL을 '/' 기준으로 나눔
+      const urlParts = url.split('/');
+      
+      // .mp4로 끝나는 부분 찾기 (쿼리 파라미터 제외)
+      for (const part of urlParts) {
+        if (part.includes('.mp4')) {
+          // ? 이전 부분만 추출 (쿼리 파라미터 제거)
+          return part.split('?')[0];
+        }
+      }
+      throw new Error('URL에서 파일명을 찾을 수 없습니다.');
+    } catch (error) {
+      console.error('파일명 추출 실패:', error);
+      throw error;
+    }
+  };
+
+  // S3 파일 업로드 처리 (영화 등록과 분리)
+  const handleS3Upload = async () => {
     if (!selectedFile) {
       setErrorMessage('영화 파일을 선택해주세요.');
       return;
     }
     
+    try {
+      setIsUploading(true);
+      setErrorMessage('');
+      setUploadProgress(10);
+      
+      // 1. 프리사인드 URL 요청
+      const presignedData = await getPresignedUrl();
+      setUploadProgress(30);
+      
+      // 2. S3에 파일 직접 업로드
+      const uploadSuccess = await uploadFileToS3(presignedData.url, selectedFile);
+      setUploadProgress(90);
+      
+      if (!uploadSuccess) {
+        throw new Error('파일 업로드가 실패했습니다.');
+      }
+      
+      // 3. S3 파일명 추출
+      const s3FileName = extractS3FileNameFromUrl(presignedData.url);
+      setS3FileName(s3FileName);
+      
+      // 업로드 성공 상태 설정
+      setS3UploadComplete(true);
+      setUploadProgress(100);
+      
+      // 파일 이름에서 확장자 제거하여 제목으로 설정 (이미 설정되어 있으나 확인)
+      const fileName = selectedFile.name.replace(/\.[^/.]+$/, '');
+      setTitle(fileName);
+      
+      // 성공 메시지는 3초 후 사라짐
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 3000);
+    } catch (error) {
+      console.error('S3 파일 업로드 실패:', error);
+      if (error instanceof Error) {
+        setErrorMessage(`S3 파일 업로드에 실패했습니다: ${error.message}`);
+      } else {
+        setErrorMessage('S3 파일 업로드에 실패했습니다.');
+      }
+      setUploadProgress(0);
+      setS3UploadComplete(false);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // 영화 등록 처리 (S3 업로드 이후)
+  const handleMovieRegistration = async () => {
+    if (!s3UploadComplete) {
+      setErrorMessage('먼저 파일을 S3에 업로드해야 합니다.');
+      return;
+    }
+    
     if (!title.trim()) {
       setErrorMessage('영화 제목을 입력해주세요.');
+      return;
+    }
+    
+    if (!detail.trim()) {
+      setErrorMessage('영화 설명을 입력해주세요.');
       return;
     }
     
@@ -172,33 +257,19 @@ export const AdminPage = () => {
     try {
       setIsUploading(true);
       setErrorMessage('');
-      setUploadProgress(10);
       
-      // 1. 프리사인드 URL 요청
-      const presignedData = await getPresignedUrl();
-      setUploadProgress(20);
-      
-      // 2. S3에 파일 직접 업로드
-      const uploadSuccess = await uploadFileToS3(presignedData.url, selectedFile);
-      setUploadProgress(80);
-      
-      if (!uploadSuccess) {
-        throw new Error('파일 업로드가 실패했습니다.');
-      }
-      
-      // 3. 영화 데이터 생성
+      // 영화 데이터 생성
       const movieData: CreateMovieDto = {
         title,
         detail,
         directorId: Number(selectedDirectorId),
         genreIds: selectedGenreIds,
-        movieFileName: presignedData.filename // S3에 업로드된 파일 이름 사용
+        movieFileName: s3FileName // S3에 업로드된 파일 이름 사용
       };
       
-      // 4. 영화 데이터 서버에 전송
+      // 영화 데이터 서버에 전송
       const { movieService } = await import('../services/movie.service');
       await movieService.createMovie(movieData);
-      setUploadProgress(100);
       
       setUploadSuccess(true);
       // 폼 초기화
@@ -207,7 +278,8 @@ export const AdminPage = () => {
       setDetail('');
       setSelectedDirectorId('');
       setSelectedGenreIds([]);
-      setUploadProgress(0);
+      setS3UploadComplete(false);
+      setS3FileName('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       
       // 성공 메시지는 3초 후 사라짐
@@ -215,13 +287,12 @@ export const AdminPage = () => {
         setUploadSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('영화 업로드 실패:', error);
+      console.error('영화 등록 실패:', error);
       if (error instanceof Error) {
-        setErrorMessage(`영화 업로드에 실패했습니다: ${error.message}`);
+        setErrorMessage(`영화 등록에 실패했습니다: ${error.message}`);
       } else {
-        setErrorMessage('영화 업로드에 실패했습니다.');
+        setErrorMessage('영화 등록에 실패했습니다.');
       }
-      setUploadProgress(0);
     } finally {
       setIsUploading(false);
     }
@@ -246,7 +317,7 @@ export const AdminPage = () => {
                   accept="video/mp4"
                   onChange={handleFileChange}
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
-                  disabled={isUploading}
+                  disabled={isUploading || s3UploadComplete}
                 />
                 {selectedFile && (
                   <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
@@ -255,100 +326,138 @@ export const AdminPage = () => {
                 )}
               </div>
               
-              {selectedFile && (
+              {/* S3 업로드 버튼 - 파일 선택 시에만 표시 */}
+              {selectedFile && !s3UploadComplete && (
+                <div className="mt-4">
+                  <button
+                    onClick={handleS3Upload}
+                    disabled={isUploading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md disabled:opacity-50"
+                  >
+                    {isUploading ? 'S3에 업로드 중...' : 'S3에 파일 업로드'}
+                  </button>
+                </div>
+              )}
+              
+              {/* 업로드 진행 상태 */}
+              {isUploading && uploadProgress > 0 && (
+                <div className="mt-4">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                    <div 
+                      className="bg-red-600 h-4 rounded-full" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
+                    {uploadProgress}% 완료
+                  </p>
+                </div>
+              )}
+              
+              {/* S3 업로드 완료 메시지 */}
+              {s3UploadComplete && (
+                <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
+                  파일이 S3에 성공적으로 업로드되었습니다! 이제 영화 정보를 등록해주세요.
+                </div>
+              )}
+              
+              {/* 영화 정보 입력 (S3 업로드 완료 시에만 표시) */}
+              {s3UploadComplete && (
                 <>
-                  {/* 영화 제목 */}
-                  <div>
-                    <label htmlFor="title" className="block text-sm font-medium mb-2">영화 제목</label>
-                    <input
-                      id="title"
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
-                      required
-                      disabled={isUploading}
-                    />
-                  </div>
-                  
-                  {/* 영화 설명 */}
-                  <div>
-                    <label htmlFor="detail" className="block text-sm font-medium mb-2">영화 설명</label>
-                    <textarea
-                      id="detail"
-                      value={detail}
-                      onChange={(e) => setDetail(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
-                      rows={4}
-                      disabled={isUploading}
-                    />
-                  </div>
-                  
-                  {/* 감독 선택 */}
-                  <div>
-                    <label htmlFor="director" className="block text-sm font-medium mb-2">감독 (필수)</label>
-                    <select
-                      id="director"
-                      value={selectedDirectorId}
-                      onChange={(e) => setSelectedDirectorId(e.target.value ? Number(e.target.value) : '')}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
-                      required
-                      disabled={isUploading}
-                    >
-                      <option value="">감독 선택</option>
-                      {directors.map(director => (
-                        <option key={director.id} value={director.id}>{director.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {/* 장르 선택 (1-3개) */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">장르 (1-3개 선택)</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {genres.map(genre => (
-                        <div key={genre.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`genre-${genre.id}`}
-                            checked={selectedGenreIds.includes(genre.id)}
-                            onChange={() => handleGenreChange(genre.id)}
-                            disabled={(isUploading || (!selectedGenreIds.includes(genre.id) && selectedGenreIds.length >= 3))}
-                            className="mr-2"
-                          />
-                          <label htmlFor={`genre-${genre.id}`}>{genre.name}</label>
-                        </div>
-                      ))}
+                  <div className="mt-6 border-t pt-6">
+                    <h3 className="text-lg font-medium mb-4">영화 정보 등록</h3>
+                    
+                    {/* S3 파일명 표시 (읽기 전용) */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">S3 파일명 (변경 불가)</label>
+                      <input
+                        type="text"
+                        value={s3FileName}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 dark:bg-gray-600"
+                        disabled
+                      />
+                      <p className="mt-1 text-xs text-gray-500">이 파일명은 자동으로 생성되며 변경할 수 없습니다.</p>
                     </div>
-                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {selectedGenreIds.length}/3 장르 선택됨
+                    
+                    {/* 영화 제목 */}
+                    <div className="mb-4">
+                      <label htmlFor="title" className="block text-sm font-medium mb-2">영화 제목</label>
+                      <input
+                        id="title"
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
+                        required
+                        disabled={isUploading}
+                      />
                     </div>
-                  </div>
-                  
-                  {/* 업로드 진행 상태 */}
-                  {isUploading && uploadProgress > 0 && (
-                    <div className="mt-4">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
-                        <div 
-                          className="bg-red-600 h-4 rounded-full" 
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
+                    
+                    {/* 영화 설명 */}
+                    <div className="mb-4">
+                      <label htmlFor="detail" className="block text-sm font-medium mb-2">영화 설명 (필수)</label>
+                      <textarea
+                        id="detail"
+                        value={detail}
+                        onChange={(e) => setDetail(e.target.value)}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
+                        rows={4}
+                        required
+                        disabled={isUploading}
+                      />
+                    </div>
+                    
+                    {/* 감독 선택 */}
+                    <div className="mb-4">
+                      <label htmlFor="director" className="block text-sm font-medium mb-2">감독 (필수)</label>
+                      <select
+                        id="director"
+                        value={selectedDirectorId}
+                        onChange={(e) => setSelectedDirectorId(e.target.value ? Number(e.target.value) : '')}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700"
+                        required
+                        disabled={isUploading}
+                      >
+                        <option value="">감독 선택</option>
+                        {directors.map(director => (
+                          <option key={director.id} value={director.id}>{director.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* 장르 선택 (1-3개) */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">장르 (1-3개 선택)</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {genres.map(genre => (
+                          <div key={genre.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`genre-${genre.id}`}
+                              checked={selectedGenreIds.includes(genre.id)}
+                              onChange={() => handleGenreChange(genre.id)}
+                              disabled={(isUploading || (!selectedGenreIds.includes(genre.id) && selectedGenreIds.length >= 3))}
+                              className="mr-2"
+                            />
+                            <label htmlFor={`genre-${genre.id}`}>{genre.name}</label>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
-                        {uploadProgress}% 완료
-                      </p>
+                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {selectedGenreIds.length}/3 장르 선택됨
+                      </div>
                     </div>
-                  )}
-                  
-                  {/* 업로드 버튼 */}
-                  <div className="mt-6">
-                    <button
-                      onClick={handleUpload}
-                      disabled={isUploading}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md disabled:opacity-50"
-                    >
-                      {isUploading ? '업로드 중...' : '영화 업로드'}
-                    </button>
+                    
+                    {/* 영화 등록 버튼 */}
+                    <div className="mt-6">
+                      <button
+                        onClick={handleMovieRegistration}
+                        disabled={isUploading}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md disabled:opacity-50"
+                      >
+                        {isUploading ? '영화 등록 중...' : '영화 정보 등록'}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -363,7 +472,7 @@ export const AdminPage = () => {
               {/* 성공 메시지 */}
               {uploadSuccess && (
                 <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
-                  영화가 성공적으로 업로드되었습니다!
+                  영화가 성공적으로 등록되었습니다!
                 </div>
               )}
             </div>
