@@ -9,7 +9,6 @@ export const MovieDetailPage = () => {
   const [movie, setMovie] = useState<MovieDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [likeLoading, setLikeLoading] = useState(false);
 
   useEffect(() => {
     const fetchMovie = async () => {
@@ -32,18 +31,19 @@ export const MovieDetailPage = () => {
   }, [id]);
 
   const handleLike = async () => {
-    if (!id || !movie) return;
-    
-    setLikeLoading(true);
+    if (!movie) return;
+
     try {
-      // 동적으로 서비스 로드
-      const { movieService } = await import('../services/movie.service');
-      const updatedMovie = await movieService.likeMovie(parseInt(id));
-      setMovie(updatedMovie);
-    } catch (err) {
-      console.error('좋아요 처리 실패:', err);
-    } finally {
-      setLikeLoading(false);
+      const response = await fetch(`/api/movie/${movie.id}/like`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const updatedMovie = await response.json();
+        setMovie(updatedMovie.data);
+      }
+    } catch (error) {
+      console.error('좋아요 처리중 오류가 발생했습니다:', error);
     }
   };
 
@@ -65,8 +65,6 @@ export const MovieDetailPage = () => {
       if (Hls.isSupported()) {
         console.log('HLS.js is supported');
         
-        // Create custom loader with any type
-        // This avoids TypeScript errors when dealing with Hls.js's internal types
         let hls: Hls;
         
         try {
@@ -239,7 +237,7 @@ export const MovieDetailPage = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-          <div className="aspect-video w-full bg-black">
+          <div className="aspect-video w-full bg-black relative">
             <video
               ref={videoRef}
               controls
@@ -255,10 +253,9 @@ export const MovieDetailPage = () => {
               <h1 className="text-3xl font-bold">{movie.title}</h1>
               <button
                 onClick={handleLike}
-                disabled={likeLoading}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
               >
-                {likeLoading ? '처리 중...' : `좋아요 (${movie.likeCount?? 0})`}
+                좋아요 ({movie.likeCount})
               </button>
             </div>
 
@@ -288,18 +285,9 @@ export const MovieDetailPage = () => {
                 </div>
               </div>
             </div>
-
-            {/* <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                추가 날짜: {new Date(movie.createdAt).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                업데이트 날짜: {new Date(movie.updatedAt).toLocaleDateString()}
-              </p>
-            </div> */}
           </div>
         </div>
       </div>
     </Layout>
   );
-}; 
+};
