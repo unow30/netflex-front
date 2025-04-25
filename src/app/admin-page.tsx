@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { Layout } from '../components/layout/layout';
 import { Director, Genre, CreateMovieDto } from '../types';
 import { api, extractData, ApiResponse } from '../services/api';
+import { extractErrorMessage } from '../utils/errorMessage';
 
 // 프리사인드 URL 응답 타입
 interface PresignedUrlResponse {
@@ -46,7 +47,7 @@ export const AdminPage = () => {
         setGenres(genresData);
       } catch (error) {
         console.error('데이터 가져오기 실패:', error);
-        setErrorMessage('감독 및 장르 정보를 불러오는데 실패했습니다.');
+        setErrorMessage(await extractErrorMessage(error));
       }
     };
     
@@ -213,11 +214,7 @@ export const AdminPage = () => {
       }, 3000);
     } catch (error) {
       console.error('S3 파일 업로드 실패:', error);
-      if (error instanceof Error) {
-        setErrorMessage(`S3 파일 업로드에 실패했습니다: ${error.message}`);
-      } else {
-        setErrorMessage('S3 파일 업로드에 실패했습니다.');
-      }
+      setErrorMessage(await extractErrorMessage(error));
       setUploadProgress(0);
       setS3UploadComplete(false);
     } finally {
@@ -267,7 +264,7 @@ export const AdminPage = () => {
       
       // 영화 데이터 서버에 전송
       const response = await api.post('movie', { json: movieData }).json<ApiResponse<any>>();
-      
+
       setUploadSuccess(true);
       // 폼 초기화
       setSelectedFile(null);
@@ -283,13 +280,9 @@ export const AdminPage = () => {
       setTimeout(() => {
         setUploadSuccess(false);
       }, 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('영화 등록 실패:', error);
-      if (error instanceof Error) {
-        setErrorMessage(`영화 등록에 실패했습니다: ${error.message}`);
-      } else {
-        setErrorMessage('영화 등록에 실패했습니다.');
-      }
+      setErrorMessage(await extractErrorMessage(error));
     } finally {
       setIsUploading(false);
     }

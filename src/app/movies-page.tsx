@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
 import { MovieDto } from '../types';
+import { extractErrorMessage } from '../utils/errorMessage';
 
 export const MoviesPage = () => {
   const [movies, setMovies] = useState<MovieDto[]>([]);
@@ -25,7 +26,7 @@ export const MoviesPage = () => {
           setFilteredMovies(result as any);
         }
       } catch (err) {
-        setError('영화 목록을 불러오는데 실패했습니다.');
+        setError(await extractErrorMessage(err));
         console.error(err);
       } finally {
         setLoading(false);

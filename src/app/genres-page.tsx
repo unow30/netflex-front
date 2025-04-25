@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
 import { Genre } from '../types';
+import { extractErrorMessage } from '../utils/errorMessage';
 
 export const GenresPage = () => {
   const [genres, setGenres] = useState<Genre[]>([]);
@@ -16,7 +17,7 @@ export const GenresPage = () => {
         const result = await genreService.getGenres();
         setGenres(result);
       } catch (err) {
-        setError('장르 목록을 불러오는데 실패했습니다.');
+        setError(await extractErrorMessage(err));
         console.error(err);
       } finally {
         setLoading(false);
