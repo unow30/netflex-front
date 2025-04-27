@@ -3,6 +3,7 @@ import { Layout } from '../components/layout/layout';
 import { Director, Genre, CreateMovieDto } from '../types';
 import { api, extractData, ApiResponse } from '../services/api';
 import { extractErrorMessage } from '../utils/errorMessage';
+import ky from 'ky'; // ky import 추가
 
 // 프리사인드 URL 응답 타입
 interface PresignedUrlResponse {
@@ -131,19 +132,17 @@ export const AdminPage = () => {
   // S3에 파일 업로드
   const uploadFileToS3 = async (url: string, file: File): Promise<boolean> => {
     try {
-      // 직접 fetch 사용하여 PUT 요청으로 파일 업로드
-      const response = await fetch(url, {
-        method: 'PUT',
+      // ky 사용하여 PUT 요청으로 파일 업로드
+      const response = await ky.put(url, {
         body: file,
         headers: {
           'Content-Type': 'video/mp4',
-        }
+        },
+        // ky는 기본적으로 credentials를 same-origin으로 설정함
       });
-
       if (!response.ok) {
         throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
       }
-      
       // 성공시 true 리턴
       return response.ok;
     } catch (error) {

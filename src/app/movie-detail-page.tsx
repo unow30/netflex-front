@@ -4,6 +4,7 @@ import { Layout } from '../components/layout/layout';
 import { MovieDto } from '../types';
 import { HLSVideoPlayer } from '../components/video/HLSVideoPlayer';
 import { extractErrorMessage } from '../utils/errorMessage';
+import ky from 'ky';
 
 const getFallbackMovieUrl = (id?: string) => {
   if (!id) return '';
@@ -54,7 +55,7 @@ export const MovieDetailPage = () => {
         const movieFileName = movie?.movieFileName;
         if (!movieFileName) return;
         // 1. origin.m3u8 fetch
-        const res = await fetch(movieFileName);
+        const res = await ky(movieFileName);
         if (!res.ok) throw new Error('origin.m3u8을 불러올 수 없습니다.');
         const manifest = await res.text();
         // 2. #EXT-X-IMAGE-STREAM-INF에서 썸네일 m3u8 경로 추출
@@ -62,7 +63,7 @@ export const MovieDetailPage = () => {
         if (!imageInfMatch) throw new Error('썸네일 메니페스토 경로를 찾을 수 없습니다.');
         const thumbnailManifestUrl = new URL(imageInfMatch[1], movieFileName).toString();
         // 3. 썸네일 메니페스토 fetch
-        const thumbRes = await fetch(thumbnailManifestUrl);
+        const thumbRes = await ky(thumbnailManifestUrl);
         if (!thumbRes.ok) throw new Error('썸네일 메니페스토를 불러올 수 없습니다.');
         const thumbManifest = await thumbRes.text();
         // 4. #EXT-X-TILES 정보 파싱
@@ -91,11 +92,9 @@ export const MovieDetailPage = () => {
   const handleLike = async () => {
     if (!movie) return;
     try {
-      const response = await fetch(`/api/movie/${movie.id}/like`, {
-        method: 'POST',
-      });
+      const response = await ky.post(`/api/movie/${movie.id}/like`);
       if (response.ok) {
-        const updatedMovie = await response.json();
+        const updatedMovie = await response.json<any>();
         setMovie(updatedMovie.data);
       }
     } catch (error) {
