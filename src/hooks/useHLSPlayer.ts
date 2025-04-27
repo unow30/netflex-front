@@ -14,6 +14,10 @@ export function useHLSPlayer(videoUrl: string, autoPlay: boolean = false) {
     setLoading(true);
     setError(null);
 
+    function clearError() {
+      setError(null);
+    }
+
     if (Hls.isSupported()) {
       hls = new Hls();
       hls.loadSource(videoUrl);
@@ -27,6 +31,9 @@ export function useHLSPlayer(videoUrl: string, autoPlay: boolean = false) {
         setLoading(false);
         if (data.fatal && hls) hls.destroy();
       });
+      // 추가: 실제 재생이 시작되면 오류 상태 해제
+      video.addEventListener('playing', clearError);
+      video.addEventListener('play', clearError);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = videoUrl;
       video.addEventListener('loadedmetadata', () => {
@@ -37,6 +44,9 @@ export function useHLSPlayer(videoUrl: string, autoPlay: boolean = false) {
         setError('비디오 재생 오류');
         setLoading(false);
       });
+      // 추가: 실제 재생이 시작되면 오류 상태 해제
+      video.addEventListener('playing', clearError);
+      video.addEventListener('play', clearError);
     } else {
       setError('HLS를 지원하지 않는 브라우저입니다.');
       setLoading(false);
@@ -44,6 +54,10 @@ export function useHLSPlayer(videoUrl: string, autoPlay: boolean = false) {
 
     return () => {
       if (hls) hls.destroy();
+      if (video) {
+        video.removeEventListener('playing', clearError);
+        video.removeEventListener('play', clearError);
+      }
     };
   }, [videoUrl, autoPlay]);
 

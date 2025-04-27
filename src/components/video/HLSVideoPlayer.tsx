@@ -6,10 +6,11 @@ interface Props {
   autoPlay?: boolean;
   poster?: string;
   className?: string;
+  muted?: boolean;
 }
 
 export const HLSVideoPlayer: React.FC<Props> = ({
-  videoUrl, autoPlay = false, poster, className = ''
+  videoUrl, autoPlay, poster, className = '', muted = false
 }) => {
   const { videoRef, loading, error } = useHLSPlayer(videoUrl, autoPlay);
 
@@ -23,6 +24,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         poster={poster}
         className="w-full h-full object-contain"
         style={{ background: 'black' }}
+        muted={muted}
+        autoPlay={autoPlay}
       />
     </div>
   );

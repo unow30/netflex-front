@@ -122,8 +122,9 @@ export const MovieDetailPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           <HLSVideoPlayer
             videoUrl={movie?.movieFileName || getFallbackMovieUrl(id)}
-            autoPlay={false}
+            autoPlay={true}
             poster={movie?.movieFileName}
+            muted={false}
           />
           {movie && (
             <div className="p-6">
