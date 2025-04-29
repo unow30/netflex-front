@@ -6,6 +6,8 @@ interface ThumbnailData {
   y: number;
   width: number;
   height: number;
+  fullImageWidth?: number; // 전체 타일 이미지의 가로
+  fullImageHeight?: number; // 전체 타일 이미지의 세로
 }
 
 interface Props {
@@ -129,17 +131,19 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
 
   if (!visible || !thumbnail) return null;
 
-  // vtt에서 내려온 타일의 width/height를 그대로 사용
+  // 타일 한 개의 크기
   const displayWidth = thumbnail.width;
   const displayHeight = thumbnail.height;
-  const scale = 1;
+  // 전체 타일 이미지의 크기 (있으면 사용, 없으면 auto)
+  const fullImageWidth = thumbnail.fullImageWidth;
+  const fullImageHeight = thumbnail.fullImageHeight;
 
   // clamp 좌표 계산
   const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
   let previewLeft = clamp(position.x - displayWidth / 2, 0, window.innerWidth - displayWidth);
   let previewTop = clamp(position.y - displayHeight - 12, 0, window.innerHeight - displayHeight);
 
-  // background-size: 타일 원본 크기, background-position: -x, -y
+  // background-size: 전체 원본 이미지 크기, background-position: -x, -y
   const previewStyle: React.CSSProperties = {
     width: `${displayWidth}px`,
     height: `${displayHeight}px`,
@@ -148,7 +152,7 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
     backgroundImage: loaded ? `url(${thumbnail.url})` : undefined,
     backgroundPosition: `-${thumbnail.x}px -${thumbnail.y}px`,
     backgroundRepeat: 'no-repeat',
-    backgroundSize: `${thumbnail.width}px ${thumbnail.height}px`,
+    backgroundSize: fullImageWidth && fullImageHeight ? `${fullImageWidth}px ${fullImageHeight}px` : 'auto',
     backgroundColor: '#222',
     border: '1px solid #333',
     boxSizing: 'border-box',
