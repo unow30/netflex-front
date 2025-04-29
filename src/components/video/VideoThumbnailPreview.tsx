@@ -21,9 +21,6 @@ const LOADING_INDICATOR = (
   </div>
 );
 
-const MAX_WIDTH = 156; // px (예: 312의 50%)
-const MAX_HEIGHT = 88; // px (예: 176의 50%)
-
 export const VideoThumbnailPreview: React.FC<Props> = ({
   videoElement,
   getThumbnailAt,
@@ -132,33 +129,26 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
 
   if (!visible || !thumbnail) return null;
 
-  // 비율 유지하며 최대 크기 내에서 썸네일 타일 하나가 온전히 보이도록 계산
-  const scale = Math.min(
-    MAX_WIDTH / thumbnail.width,
-    MAX_HEIGHT / thumbnail.height,
-    1
-  );
-  const displayWidth = Math.round(thumbnail.width * scale);
-  const displayHeight = Math.round(thumbnail.height * scale);
+  // vtt에서 내려온 타일의 width/height를 그대로 사용
+  const displayWidth = thumbnail.width;
+  const displayHeight = thumbnail.height;
+  const scale = 1;
 
   // clamp 좌표 계산
   const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
-
-  // 재생바와 가까운 위치 계산
-  // x는 마우스, y는 진행바 위쪽에 고정
   let previewLeft = clamp(position.x - displayWidth / 2, 0, window.innerWidth - displayWidth);
   let previewTop = clamp(position.y - displayHeight - 12, 0, window.innerHeight - displayHeight);
 
-  // background-size: 전체 원본 이미지 크기, background-position: -x, -y
+  // background-size: 타일 원본 크기, background-position: -x, -y
   const previewStyle: React.CSSProperties = {
     width: `${displayWidth}px`,
     height: `${displayHeight}px`,
     left: previewLeft,
     top: previewTop,
     backgroundImage: loaded ? `url(${thumbnail.url})` : undefined,
-    backgroundPosition: `-${thumbnail.x * scale}px -${thumbnail.y * scale}px`,
+    backgroundPosition: `-${thumbnail.x}px -${thumbnail.y}px`,
     backgroundRepeat: 'no-repeat',
-    backgroundSize: `${thumbnail.width * scale}px ${thumbnail.height * scale}px`,
+    backgroundSize: `${thumbnail.width}px ${thumbnail.height}px`,
     backgroundColor: '#222',
     border: '1px solid #333',
     boxSizing: 'border-box',
