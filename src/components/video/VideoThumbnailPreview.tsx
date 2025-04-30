@@ -6,12 +6,16 @@ interface ThumbnailData {
   y: number;
   width: number;
   height: number;
+  fullImageWidth?: number;
+  fullImageHeight?: number;
 }
 
 interface Props {
   videoElement: HTMLVideoElement | null;
   getThumbnailAt: (time: number) => ThumbnailData | null;
   thumbnailsLoaded: boolean;
+  previewTime?: number | null;
+  left?: number;
   className?: string;
 }
 
@@ -25,85 +29,28 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
   videoElement,
   getThumbnailAt,
   thumbnailsLoaded,
+  previewTime = null,
+  left = 0,
   className = '',
 }) => {
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [currentTime, setCurrentTime] = useState(0);
   const [thumbnail, setThumbnail] = useState<ThumbnailData | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const imageCache = useRef<{ [url: string]: boolean }>({});
-  const progressBarRef = useRef<HTMLProgressElement | HTMLDivElement | HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!videoElement) return;
-    setTimeout(() => {
-      const container = videoElement.closest('.video-container') || videoElement.parentElement;
-      if (!container) return;
-      const selectors = [
-        'video::-webkit-media-controls-timeline',
-        '.vjs-progress-holder',
-        'progress',
-        'input[type="range"]',
-        '.progress-bar',
-        'video::-webkit-media-controls-panel',
-        '.video-progress',
-        '.progress-bar-container',
-        '.timeline',
-        '.controls .progress',
-      ];
-      for (const selector of selectors) {
-        const element = container.querySelector(selector);
-        if (element) {
-          progressBarRef.current = element as HTMLProgressElement | HTMLDivElement;
-          break;
-        }
-      }
-      if (!progressBarRef.current) {
-        progressBarRef.current = videoElement;
-      }
-    }, 500);
-  }, [videoElement]);
-
-  useEffect(() => {
-    if (!videoElement || !thumbnailsLoaded) return;
-    const videoContainer = videoElement.closest('.video-container') || videoElement.parentElement;
-    if (!videoContainer) return;
-    const handleMouseMove = (e: Event) => {
-      const mouseEvent = e as MouseEvent;
-      const isControlElement = (mouseEvent.target as HTMLElement).closest('.video-container');
-      if (!isControlElement) return;
-      const rect = videoContainer.getBoundingClientRect();
-      const relativeX = (mouseEvent.clientX - rect.left) / rect.width;
-      const timeInSeconds = videoElement.duration * relativeX;
-      if (isNaN(timeInSeconds)) return;
-      const progressRegionStartY = rect.top + rect.height * 0.75;
-      const isInProgressRegion = mouseEvent.clientY >= progressRegionStartY && mouseEvent.clientY <= rect.bottom;
-      if (isInProgressRegion) {
-        setPosition({
-          x: mouseEvent.clientX,
-          y: progressRegionStartY - 10,
-        });
-        setCurrentTime(timeInSeconds);
-        const thumbData = getThumbnailAt(timeInSeconds);
-        setThumbnail(thumbData);
-        setVisible(!!thumbData);
-      } else {
-        setVisible(false);
-      }
-    };
-    const handleMouseLeave = () => {
+    // 썸네일 프리뷰를 보여줄지 결정
+    if (!thumbnailsLoaded || previewTime === null || !videoElement) {
       setVisible(false);
-    };
-    videoContainer.addEventListener('mousemove', handleMouseMove);
-    videoContainer.addEventListener('mouseleave', handleMouseLeave);
-    return () => {
-      videoContainer.removeEventListener('mousemove', handleMouseMove);
-      videoContainer.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [videoElement, thumbnailsLoaded, getThumbnailAt]);
+      setThumbnail(null);
+      return;
+    }
+    const thumbData = getThumbnailAt(previewTime);
+    setThumbnail(thumbData);
+    setVisible(!!thumbData);
+  }, [thumbnailsLoaded, previewTime, getThumbnailAt, videoElement]);
 
   useEffect(() => {
     if (!thumbnail || !visible) return;
@@ -129,46 +76,54 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
 
   if (!visible || !thumbnail) return null;
 
-  // vtt에서 내려온 타일의 width/height를 그대로 사용
+  // 타일 한 개의 크기
   const displayWidth = thumbnail.width;
   const displayHeight = thumbnail.height;
-  const scale = 1;
 
   // clamp 좌표 계산
   const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
-  let previewLeft = clamp(position.x - displayWidth / 2, 0, window.innerWidth - displayWidth);
-  let previewTop = clamp(position.y - displayHeight - 12, 0, window.innerHeight - displayHeight);
+  let previewLeft = clamp(left - displayWidth / 2, 0, window.innerWidth - displayWidth);
+  let previewTop = -displayHeight - 12; // progress bar 위에 뜨게
 
-  // background-size: 타일 원본 크기, background-position: -x, -y
+  // background-size: 전체 원본 이미지 크기, background-position: -x, -y
   const previewStyle: React.CSSProperties = {
     width: `${displayWidth}px`,
     height: `${displayHeight}px`,
     left: previewLeft,
     top: previewTop,
-    backgroundImage: loaded ? `url(${thumbnail.url})` : undefined,
-    backgroundPosition: `-${thumbnail.x}px -${thumbnail.y}px`,
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: `${thumbnail.width}px ${thumbnail.height}px`,
-    backgroundColor: '#222',
-    border: '1px solid #333',
-    boxSizing: 'border-box',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     position: 'absolute',
     zIndex: 10,
     overflow: 'hidden',
+    pointerEvents: 'none',
   };
 
   return (
     <div
-      className={`thumbnail-preview rounded overflow-hidden bg-black shadow-md flex flex-col items-center ${className}`}
+      className={`preview-thumbnail rounded overflow-hidden bg-black shadow-md flex flex-col items-center ${className}`}
       style={previewStyle}
       ref={containerRef}
     >
       {!loaded && !error && LOADING_INDICATOR}
-      {error && (
-        <div className="text-red-500 text-xs w-full h-full flex items-center justify-center">썸네일 로드 실패</div>
+      {error && <div className="text-xs text-red-500 py-2">썸네일 오류</div>}
+      {loaded && !error && (
+        <img
+          src={thumbnail.url}
+          alt="썸네일 미리보기"
+          style={{
+            width: thumbnail.fullImageWidth || displayWidth,
+            height: thumbnail.fullImageHeight || displayHeight,
+            objectFit: 'none',
+            objectPosition: `-${thumbnail.x}px -${thumbnail.y}px`,
+            background: '#222',
+            borderRadius: '8px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+          }}
+        />
+      )}
+      {loaded && !error && (
+        <span className="text-xs mt-1 text-gray-400 bg-black/70 px-2 rounded">
+          {Math.floor(previewTime! / 60)}:{((previewTime! % 60) | 0).toString().padStart(2, '0')}
+        </span>
       )}
     </div>
   );
