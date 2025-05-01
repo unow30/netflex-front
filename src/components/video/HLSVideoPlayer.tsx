@@ -148,8 +148,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     <div
       className={
         theaterMode
-          ? "bg-black/90 w-full max-w-[1200px] min-w-0 mx-auto video-player relative box-border mb-6"
-          : "bg-black w-full max-w-3xl min-w-0 mx-auto video-player relative box-border mb-6"
+          ? "bg-black/90 w-full max-w-[1200px] min-w-0 mx-auto video-player relative box-border mb-12 overflow-visible"
+          : "bg-black w-full max-w-3xl min-w-0 mx-auto video-player relative box-border mb-12 overflow-visible"
       }
       ref={videoContainerRef}
       style={{ aspectRatio: '16/9', overflow: 'visible' }}

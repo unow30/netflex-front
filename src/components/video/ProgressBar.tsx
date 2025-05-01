@@ -30,7 +30,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => (
   <div
     ref={progressBarRef}
-    className="progress-container h-12 relative cursor-pointer bg-black/80 rounded mb-5 w-full mx-auto"
+    className="progress-container h-12 relative cursor-pointer bg-black/80 rounded mb-8 w-full mx-auto"
     onClick={onClick}
     onMouseMove={onMouseMove}
     onMouseLeave={onMouseLeave}
@@ -41,12 +41,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       className="progress-bar absolute left-0"
       style={{
         width: '100%',
-        height: 6,
+        height: 8,
         background: '#222',
         top: '50%',
         transform: 'translateY(-50%)',
         borderRadius: 6,
-        zIndex: 0
+        zIndex: 10
       }}
     />
     {/* 빨간 진행선 */}
@@ -54,12 +54,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       className="progress-filled absolute left-0"
       style={{
         width: `${progress}%`,
-        height: 6,
+        height: 8,
         background: '#ef4444',
         top: '50%',
         transform: 'translateY(-50%)',
         borderRadius: 6,
-        zIndex: 1
+        zIndex: 11
       }}
     />
     {/* 핸들(빨간 원) */}
@@ -68,10 +68,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       style={{
         left: `${progress}%`,
         top: '50%',
-        width: 14,
-        height: 14,
+        width: 16,
+        height: 16,
         transform: 'translate(-50%, -50%)',
-        zIndex: 2
+        zIndex: 12
       }}
     />
     {/* 썸네일 등 추가 요소 */}
