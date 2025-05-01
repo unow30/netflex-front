@@ -148,19 +148,15 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     <div
       className={
         theaterMode
-          ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/90'
-          : 'bg-black relative w-full max-w-3xl mx-auto'
+          ? 'bg-black/90 w-[90vw] max-w-[1200px] mx-auto video-player relative'
+          : 'bg-black relative w-full max-w-3xl mx-auto video-player'
       }
       ref={videoContainerRef}
       style={{ aspectRatio: '16/9', overflow: 'visible' }}
     >
       <div
-        className={
-          theaterMode
-            ? 'video-player w-[90vw] max-w-[1200px] bg-black relative flex flex-col'
-            : 'video-player w-full bg-black relative flex flex-col'
-        }
-        style={{ width: theaterMode ? '90vw' : undefined, maxWidth: '1200px', aspectRatio: '16/9', overflow: 'visible' }}
+        className="w-full bg-black relative flex flex-col"
+        style={{ maxWidth: '1200px', aspectRatio: '16/9', overflow: 'visible' }}
       >
         {loading && <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60 z-10">로딩 중...</div>}
         {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/60 z-10">{error}</div>}
