@@ -23,6 +23,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const [previewTime, setPreviewTime] = useState<number | null>(null);
   const [previewLeft, setPreviewLeft] = useState<number>(0);
   const [volume, setVolume] = useState(1);
+  const [showVolume, setShowVolume] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
@@ -188,17 +189,24 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         <button onClick={handlePlayPause} className="play-btn text-2xl">
           {isPlaying ? '⏸' : '▶'}
         </button>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={volume}
-          onChange={handleVolumeChange}
-          className="volume-slider mx-2"
-          style={{ width: 80 }}
-        />
-        <span className="volume-label text-xs w-8">{Math.round(volume * 100)}</span>
+        <button onClick={() => setShowVolume(v => !v)} className="text-2xl ml-2">
+          {volume === 0 ? '🔇' : '🔊'}
+        </button>
+        {showVolume && (
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={handleVolumeChange}
+            className="volume-slider mx-2"
+            style={{ width: 80 }}
+          />
+        )}
+        {showVolume && (
+          <span className="volume-label text-xs w-8">{Math.round(volume * 100)}</span>
+        )}
         <div className="time-display min-w-[48px] text-right ml-2">{formatTime(currentTime)}</div>
         <div className="flex-1" />
         <button onClick={handleFullscreen} className="fullscreen-btn text-2xl ml-2">
