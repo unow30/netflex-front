@@ -32,7 +32,7 @@ export const ControlRow: React.FC<ControlRowProps> = ({
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <div className="controls-row flex items-center gap-3 text-yellow-300 z-20 bg-black/40 rounded p-2 w-full mx-auto relative" style={{ margin: 0 }}>
+    <div className="controls-row flex flex-wrap items-center gap-3 text-yellow-300 z-20 bg-black rounded p-2 w-full min-w-0 mx-auto relative box-border" style={{ margin: 0 }}>
       <div className="relative">
         <button
           onClick={onPlayPause}

@@ -148,16 +148,13 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     <div
       className={
         theaterMode
-          ? 'bg-black/90 w-[90vw] max-w-[1200px] mx-auto video-player relative'
-          : 'bg-black relative w-full max-w-3xl mx-auto video-player'
+          ? "bg-black/90 w-full max-w-[1200px] min-w-0 mx-auto video-player relative box-border mb-6"
+          : "bg-black w-full max-w-3xl min-w-0 mx-auto video-player relative box-border mb-6"
       }
       ref={videoContainerRef}
       style={{ aspectRatio: '16/9', overflow: 'visible' }}
     >
-      <div
-        className="w-full bg-black relative flex flex-col"
-        style={{ maxWidth: '1200px', aspectRatio: '16/9', overflow: 'visible' }}
-      >
+      <div className="w-full h-full flex flex-col min-w-0">
         {loading && <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60 z-10">로딩 중...</div>}
         {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/60 z-10">{error}</div>}
         <video
@@ -183,6 +180,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           videoElement={videoRef.current}
           progressBarRect={progressBarRect}
         />
+        <div style={{ height: 16 }} />
         <ControlRow
           isPlaying={isPlaying}
           onPlayPause={handlePlayPause}
