@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useHLSPlayer } from '../../hooks/useHLSPlayer';
-import { VideoThumbnailPreview } from './VideoThumbnailPreview';
+import React, {useEffect, useRef, useState} from 'react';
+import {useHLSPlayer} from '../../hooks/useHLSPlayer';
+import {ProgressBar} from './ProgressBar';
+import {ControlRow} from './ControlRow';
 
 interface Props {
   videoUrl: string;
@@ -14,7 +15,6 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   videoUrl, autoPlay, poster, className = '', muted = false
 }) => {
   const { videoRef, loading, error, getThumbnailAt, thumbnailsLoaded } = useHLSPlayer(videoUrl, autoPlay);
-  const [showControls, setShowControls] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -92,8 +92,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     if (!bar || !video) return;
     const rect = bar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const newTime = (clickX / rect.width) * video.duration;
-    video.currentTime = newTime;
+    video.currentTime = (clickX / rect.width) * video.duration;
   };
 
   // 프로그레스바 썸네일 프리뷰
@@ -160,59 +159,35 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         muted={muted}
         autoPlay={autoPlay}
         tabIndex={-1}
+        onClick={handlePlayPause}
       />
       {/* --- 재생바 --- */}
-      <div
-        className="progress-container h-3 relative cursor-pointer bg-black/40 rounded mb-2 w-full mx-auto"
-        ref={progressBarRef}
+      <ProgressBar
+        progress={progress}
+        progressBarRef={progressBarRef}
         onClick={handleProgressClick}
         onMouseMove={handleProgressMouseMove}
         onMouseLeave={handleProgressMouseLeave}
-        style={{ margin: 0, maxWidth: '100%' }}
-      >
-        <div className="progress-bar w-full h-full bg-white rounded">
-          <div className="progress-filled bg-red-500 h-full rounded" style={{ width: `${progress}%` }} />
-          <div className="progress-handle absolute top-1/2 bg-red-500 rounded-full" style={{ left: `${progress}%`, width: 14, height: 14, transform: 'translate(-50%, -50%)' }} />
-        </div>
-        {/* 썸네일 프리뷰 */}
-        <VideoThumbnailPreview
-          videoElement={videoRef.current}
-          getThumbnailAt={getThumbnailAt}
-          thumbnailsLoaded={thumbnailsLoaded}
-          previewTime={previewTime}
-          left={previewLeft}
-          progressBarRect={progressBarRect}
-        />
-      </div>
+        previewTime={previewTime}
+        previewLeft={previewLeft}
+        getThumbnailAt={getThumbnailAt}
+        thumbnailsLoaded={thumbnailsLoaded}
+        videoElement={videoRef.current}
+        progressBarRect={progressBarRect}
+      />
       {/* --- 버튼 행 --- */}
-      <div className="controls-row flex items-center gap-3 text-yellow-300 z-20 bg-black/40 rounded p-2 w-full mx-auto" style={{ margin: 0 }}>
-        <button onClick={handlePlayPause} className="play-btn text-2xl">
-          {isPlaying ? '⏸' : '▶'}
-        </button>
-        <button onClick={() => setShowVolume(v => !v)} className="text-2xl ml-2">
-          {volume === 0 ? '🔇' : '🔊'}
-        </button>
-        {showVolume && (
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={handleVolumeChange}
-            className="volume-slider mx-2"
-            style={{ width: 80 }}
-          />
-        )}
-        {showVolume && (
-          <span className="volume-label text-xs w-8">{Math.round(volume * 100)}</span>
-        )}
-        <div className="time-display min-w-[48px] text-right ml-2">{formatTime(currentTime)}</div>
-        <div className="flex-1" />
-        <button onClick={handleFullscreen} className="fullscreen-btn text-2xl ml-2">
-          {fullscreen ? '🡼' : '⛶'}
-        </button>
-      </div>
+      <ControlRow
+        isPlaying={isPlaying}
+        onPlayPause={handlePlayPause}
+        showVolume={showVolume}
+        setShowVolume={setShowVolume}
+        volume={volume}
+        onVolumeChange={handleVolumeChange}
+        currentTime={currentTime}
+        formatTime={formatTime}
+        onFullscreen={handleFullscreen}
+        fullscreen={fullscreen}
+      />
     </div>
   );
 };

@@ -1,0 +1,285 @@
+<div class="video-player" id="video-player">
+    <video id="video" width="640" height="360" src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" preload="metadata"></video>
+    <div class="controls">
+        <button id="play-btn" class="play-btn">▶</button>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-filled"></div>
+                <div class="progress-handle"></div>
+            </div>
+            <div class="preview-thumbnail" id="preview-thumbnail"></div>
+        </div>
+        <div class="time-display">0:00</div>
+        <button id="fullscreen-btn" class="fullscreen-btn">⛶</button>
+    </div>
+</div>
+<style>
+    .video-player {
+        position: relative;
+        width: 640px;
+        background: black;
+    }
+
+    video {
+        display: block;
+        width: 100%;
+    }
+
+    .controls {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: yellow;
+        font-family: Arial, sans-serif;
+    }
+
+    .play-btn, .fullscreen-btn {
+        background: none;
+        border: none;
+        color: yellow;
+        font-size: 20px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .fullscreen-btn {
+        margin-left: auto;
+        font-size: 22px;
+    }
+
+    .progress-container {
+        flex-grow: 1;
+        height: 10px;
+        background: white;
+        border-radius: 5px;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: white;
+        border-radius: 5px;
+    }
+
+    .progress-filled {
+        background: red;
+        height: 100%;
+        width: 0%;
+        border-radius: 5px 0 0 5px;
+    }
+
+    .progress-handle {
+        position: absolute;
+        top: 50%;
+        left: 0%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: red;
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    /* 프리뷰 썸네일 창 스타일 (타일 1개 크기와 일치) */
+    .preview-thumbnail {
+        display: none;
+        position: absolute;
+        bottom: 18px;
+        width: 312px;
+        height: 176px;
+        background: #222;
+        border: 2px solid #fff;
+        border-radius: 6px;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 10;
+        background-repeat: no-repeat;
+        background-size: 936px 528px; /* 전체 스프라이트 크기 */
+    }
+
+    .time-display {
+        color: yellow;
+        font-size: 14px;
+        min-width: 40px;
+        text-align: right;
+        user-select: none;
+    }
+
+    /* 전체화면 모드: 원본 크기 중앙 정렬, 주변은 검은색 */
+    .video-player.fullscreen {
+        position: fixed !important;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: #000;
+        z-index: 9999;
+    }
+
+    .video-player.fullscreen video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover; /* 중요: 비디오가 화면을 가득 채움 */
+    }
+
+</style>
+<script>
+    const video = document.getElementById('video');
+    const playBtn = document.getElementById('play-btn');
+    const progressFilled = document.querySelector('.progress-filled');
+    const progressHandle = document.querySelector('.progress-handle');
+    const progressContainer = document.querySelector('.progress-container');
+    const timeDisplay = document.querySelector('.time-display');
+    const previewThumbnail = document.getElementById('preview-thumbnail');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const videoPlayer = document.getElementById('video-player');
+
+    // 시간(초)을 mm:ss 문자열로 변환
+    function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // 재생바와 시간 표시 갱신
+    function updateProgress() {
+    const percent = (video.currentTime / video.duration) * 100;
+    progressFilled.style.width = percent + '%';
+    progressHandle.style.left = percent + '%';
+    timeDisplay.textContent = formatTime(video.currentTime);
+    }
+
+    // 재생/일시정지 버튼 동작
+    playBtn.addEventListener('click', () => {
+    if (video.paused || video.ended) {
+    if (video.ended) {
+    video.currentTime = 0;
+    }
+    video.play();
+    playBtn.textContent = '⏸';
+    } else {
+    video.pause();
+    playBtn.textContent = '▶';
+    }
+    });
+
+    // 영상 재생 중일 때마다 재생바 갱신
+    video.addEventListener('timeupdate', updateProgress);
+
+    // 재생바 클릭 시 해당 위치로 이동
+    progressContainer.addEventListener('click', (e) => {
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const newTime = (clickX / width) * video.duration;
+    video.currentTime = newTime;
+    updateProgress();
+    });
+
+    // 썸네일 미리보기 기능 (타일 1개 크기와 일치, 중앙 정렬, 경계 체크)
+    progressContainer.addEventListener('mousemove', (e) => {
+    const rect = progressContainer.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const containerWidth = rect.width;
+    const thumbnailWidth = 312;
+    const thumbnailHeight = 176;
+    const hoverTime = (mouseX / containerWidth) * video.duration;
+
+    let thumbnailNumber = Math.floor(hoverTime / 27) + 1;
+    thumbnailNumber = Math.min(thumbnailNumber, 15).toString().padStart(3, '0');
+
+    const tileIndex = Math.floor((hoverTime % 27) / 3);
+    const row = Math.floor(tileIndex / 3);
+    const column = tileIndex % 3;
+
+    const xPos = -column * 312;
+    const yPos = -row * 176;
+
+    previewThumbnail.style.backgroundImage =
+    `url('https://d16ufd393m7gss.cloudfront.net/public/movie/536d75f1-754b-4888-8575-9d733d8c6886/Thumbnail_000000${thumbnailNumber}.jpg')`;
+    previewThumbnail.style.backgroundPosition = `${xPos}px ${yPos}px`;
+    previewThumbnail.style.backgroundSize = '936px 528px';
+
+    let left = mouseX - (thumbnailWidth / 2);
+    if (left < 0) {
+    left = 0;
+    } else if (left + thumbnailWidth > containerWidth) {
+    left = containerWidth - thumbnailWidth;
+    }
+    previewThumbnail.style.left = `${left}px`;
+    previewThumbnail.style.display = 'block';
+    });
+
+    // 마우스가 재생바를 벗어나면 프리뷰 창 숨김
+    progressContainer.addEventListener('mouseleave', () => {
+    previewThumbnail.style.display = 'none';
+    });
+
+    // 영상 메타데이터가 로드되면 초기화
+    video.addEventListener('loadedmetadata', () => {
+    timeDisplay.textContent = formatTime(0);
+    updateProgress();
+    });
+
+    // ==================== 전체화면 기능 ====================
+
+    // 전체화면 토글 함수 (표준 + 주요 브라우저 지원)
+    function toggleFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+    if (videoPlayer.requestFullscreen) {
+    videoPlayer.requestFullscreen();
+    } else if (videoPlayer.webkitRequestFullscreen) {
+    videoPlayer.webkitRequestFullscreen();
+    } else if (videoPlayer.mozRequestFullScreen) {
+    videoPlayer.mozRequestFullScreen();
+    } else if (videoPlayer.msRequestFullscreen) {
+    videoPlayer.msRequestFullscreen();
+    }
+    } else {
+    if (document.exitFullscreen) {
+    document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+    document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+    }
+    }
+    }
+
+    // 전체화면 버튼 클릭 시 전체화면 토글
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // 전체화면 상태 변경 시 아이콘 및 스타일 변경
+    function onFullscreenChange() {
+    if (
+    document.fullscreenElement === videoPlayer ||
+    document.webkitFullscreenElement === videoPlayer ||
+    document.mozFullScreenElement === videoPlayer ||
+    document.msFullscreenElement === videoPlayer
+    ) {
+    videoPlayer.classList.add('fullscreen');
+    fullscreenBtn.textContent = '🡼';
+    } else {
+    videoPlayer.classList.remove('fullscreen');
+    fullscreenBtn.textContent = '⛶';
+    }
+    }
+
+    // 브라우저별 전체화면 변경 이벤트 등록
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+    // 비디오 더블클릭 시 전체화면 토글
+    video.addEventListener('dblclick', toggleFullscreen);
+
+</script>
