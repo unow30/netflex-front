@@ -28,7 +28,6 @@ export const MovieDetailPage = () => {
       try {
         const { movieService } = await import('../services/movie.service');
         const result = await movieService.getMovie(parseInt(id, 10));
-        console.log('result', result)
         setMovie(result);
         setLoading(false);
       } catch (error) {

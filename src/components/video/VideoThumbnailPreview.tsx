@@ -16,6 +16,7 @@ interface Props {
   thumbnailsLoaded: boolean;
   previewTime?: number | null;
   left?: number;
+  progressBarRect?: { left: number; width: number };
   className?: string;
 }
 
@@ -31,6 +32,7 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
   thumbnailsLoaded,
   previewTime = null,
   left = 0,
+  progressBarRect,
   className = '',
 }) => {
   const [visible, setVisible] = useState(false);
@@ -82,7 +84,16 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
 
   // clamp 좌표 계산
   const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
-  let previewLeft = clamp(left - displayWidth / 2, 0, window.innerWidth - displayWidth);
+  let previewLeft;
+  if (progressBarRect && progressBarRect.width) {
+    previewLeft = clamp(
+      (progressBarRect.left || 0) + (left || 0) - displayWidth / 2,
+      progressBarRect.left || 0,
+      (progressBarRect.left || 0) + (progressBarRect.width || 0) - displayWidth
+    ) - (progressBarRect.left || 0);
+  } else {
+    previewLeft = clamp(left - displayWidth / 2, 0, window.innerWidth - displayWidth);
+  }
   let previewTop = -displayHeight - 12; // progress bar 위에 뜨게
 
   // background-size: 전체 원본 이미지 크기, background-position: -x, -y
