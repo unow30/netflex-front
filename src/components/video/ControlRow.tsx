@@ -86,11 +86,11 @@ export const ControlRow: React.FC<ControlRowProps> = ({
           onMouseEnter={() => setHovered('fullscreen')}
           onMouseLeave={() => setHovered(null)}
         >
-          {fullscreen ? '🡼' : '⛶'}
+          ⛶
         </button>
         {hovered === 'fullscreen' && (
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/80 text-xs text-white z-50 pointer-events-none whitespace-nowrap">
-            전체화면
+            {fullscreen ? '전체화면 나가기' : '전체화면'}
           </span>
         )}
       </div>
