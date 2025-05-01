@@ -122,7 +122,7 @@ export const MoviesPage = () => {
               </div>
               <div className="p-4">
                 <h2 className="text-lg font-semibold mb-1">{movie.title}</h2>
-                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{movie.detail}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{movie.movieDetail?.detail}</p>
                 {movie.director && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
                     감독: {movie.director.name}

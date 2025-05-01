@@ -4,9 +4,10 @@ import { User } from './user';
 
 // 기본 영화 상세 정보 인터페이스
 export interface MovieDetailDto {
+  id: number;
   detail: string;
-  createdAt: Date;
-  updatedAt: Date;
+  // createdAt: Date;
+  // updatedAt: Date;
 }
 
 // 기본 영화 정보 인터페이스
@@ -18,10 +19,8 @@ export interface MovieDto {
   dislikeCount: number;
   likeStatus: boolean | null;
   director: Director;
-  detail: string;
   genres: Genre[];
   likes: User[];
-
   movieDetail?: MovieDetailDto;
 }
 
