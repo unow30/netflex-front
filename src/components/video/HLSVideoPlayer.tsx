@@ -180,7 +180,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           videoElement={videoRef.current}
           progressBarRect={progressBarRect}
         />
-        <div style={{ height: 16 }} />
+        {/* 여백 div 제거: 일반/영화관/전체화면에서 동일하게 보이도록 롤백 */}
         <ControlRow
           isPlaying={isPlaying}
           onPlayPause={handlePlayPause}
