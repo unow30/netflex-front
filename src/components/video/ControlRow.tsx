@@ -11,6 +11,8 @@ interface ControlRowProps {
   formatTime: (seconds: number) => string;
   onFullscreen: () => void;
   fullscreen: boolean;
+  onToggleTheaterMode: () => void;
+  theaterMode: boolean;
 }
 
 export const ControlRow: React.FC<ControlRowProps> = ({
@@ -23,7 +25,9 @@ export const ControlRow: React.FC<ControlRowProps> = ({
   currentTime,
   formatTime,
   onFullscreen,
-  fullscreen
+  fullscreen,
+  onToggleTheaterMode,
+  theaterMode
 }) => (
   <div className="controls-row flex items-center gap-3 text-yellow-300 z-20 bg-black/40 rounded p-2 w-full mx-auto" style={{ margin: 0 }}>
     <button onClick={onPlayPause} className="play-btn text-2xl">
@@ -51,6 +55,9 @@ export const ControlRow: React.FC<ControlRowProps> = ({
     <div className="flex-1" />
     <button onClick={onFullscreen} className="fullscreen-btn text-2xl ml-2">
       {fullscreen ? '🡼' : '⛶'}
+    </button>
+    <button onClick={onToggleTheaterMode} className="theater-btn text-2xl ml-2" title="영화관 모드">
+      {theaterMode ? '🗗' : '🗖'}
     </button>
   </div>
 );

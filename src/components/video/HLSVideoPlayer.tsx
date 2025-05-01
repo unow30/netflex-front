@@ -24,6 +24,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const [previewLeft, setPreviewLeft] = useState<number>(0);
   const [volume, setVolume] = useState(1);
   const [showVolume, setShowVolume] = useState(false);
+  const [theaterMode, setTheaterMode] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
@@ -145,49 +146,62 @@ export const HLSVideoPlayer: React.FC<Props> = ({
 
   return (
     <div
-      className={`video-player bg-black relative w-full max-w-3xl mx-auto${fullscreen ? ' fullscreen' : ''}`}
+      className={
+        theaterMode
+          ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/90'
+          : 'bg-black relative w-full max-w-3xl mx-auto'
+      }
       ref={videoContainerRef}
       style={{ aspectRatio: '16/9', overflow: 'visible' }}
     >
-      {loading && <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60 z-10">로딩 중...</div>}
-      {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/60 z-10">{error}</div>}
-      <video
-        ref={videoRef}
-        poster={poster}
-        className="w-full h-full object-contain"
-        style={{ background: 'black' }}
-        muted={muted}
-        autoPlay={autoPlay}
-        tabIndex={-1}
-        onClick={handlePlayPause}
-      />
-      {/* --- 재생바 --- */}
-      <ProgressBar
-        progress={progress}
-        progressBarRef={progressBarRef}
-        onClick={handleProgressClick}
-        onMouseMove={handleProgressMouseMove}
-        onMouseLeave={handleProgressMouseLeave}
-        previewTime={previewTime}
-        previewLeft={previewLeft}
-        getThumbnailAt={getThumbnailAt}
-        thumbnailsLoaded={thumbnailsLoaded}
-        videoElement={videoRef.current}
-        progressBarRect={progressBarRect}
-      />
-      {/* --- 버튼 행 --- */}
-      <ControlRow
-        isPlaying={isPlaying}
-        onPlayPause={handlePlayPause}
-        showVolume={showVolume}
-        setShowVolume={setShowVolume}
-        volume={volume}
-        onVolumeChange={handleVolumeChange}
-        currentTime={currentTime}
-        formatTime={formatTime}
-        onFullscreen={handleFullscreen}
-        fullscreen={fullscreen}
-      />
+      <div
+        className={
+          theaterMode
+            ? 'video-player w-[90vw] max-w-[1200px] bg-black relative flex flex-col'
+            : 'video-player w-full bg-black relative flex flex-col'
+        }
+        style={{ width: theaterMode ? '90vw' : undefined, maxWidth: '1200px', aspectRatio: '16/9', overflow: 'visible' }}
+      >
+        {loading && <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60 z-10">로딩 중...</div>}
+        {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/60 z-10">{error}</div>}
+        <video
+          ref={videoRef}
+          poster={poster}
+          className="w-full h-full object-contain"
+          style={{ background: 'black' }}
+          muted={muted}
+          autoPlay={autoPlay}
+          tabIndex={-1}
+          onClick={handlePlayPause}
+        />
+        <ProgressBar
+          progress={progress}
+          progressBarRef={progressBarRef}
+          onClick={handleProgressClick}
+          onMouseMove={handleProgressMouseMove}
+          onMouseLeave={handleProgressMouseLeave}
+          previewTime={previewTime}
+          previewLeft={previewLeft}
+          getThumbnailAt={getThumbnailAt}
+          thumbnailsLoaded={thumbnailsLoaded}
+          videoElement={videoRef.current}
+          progressBarRect={progressBarRect}
+        />
+        <ControlRow
+          isPlaying={isPlaying}
+          onPlayPause={handlePlayPause}
+          showVolume={showVolume}
+          setShowVolume={setShowVolume}
+          volume={volume}
+          onVolumeChange={handleVolumeChange}
+          currentTime={currentTime}
+          formatTime={formatTime}
+          onFullscreen={handleFullscreen}
+          fullscreen={fullscreen}
+          onToggleTheaterMode={() => setTheaterMode(v => !v)}
+          theaterMode={theaterMode}
+        />
+      </div>
     </div>
   );
 };
