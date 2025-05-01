@@ -1,7 +1,7 @@
 import ky from 'ky';
 import { jwtDecode } from 'jwt-decode';
 
-const API_URL = process.env.NODE_ENV === 'production' ? 'https://ceramic-tager.store' : 'http://localhost:3000';
+const API_URL = process.env.NODE_ENV === 'production' ? 'https://api.ceramic-tager.store' : 'http://localhost:3000';
 
 export interface ApiResponse<T> {
   status: number;
