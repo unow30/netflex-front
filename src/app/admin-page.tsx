@@ -18,6 +18,7 @@ export const AdminPage = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [mbFileSize, setMbFileSize] = useState<number>(0);
   
   // S3 업로드 상태
   const [s3UploadComplete, setS3UploadComplete] = useState<boolean>(false);
@@ -78,10 +79,12 @@ export const AdminPage = () => {
       return;
     }
     
-    // 파일 크기 확인 (최대 200MB)
-    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    // 파일 크기 확인
+    const mbNumber = 400;
+    setMbFileSize(mbNumber);
+    const maxSize = mbNumber * 1024 * 1024;
     if (file.size > maxSize) {
-      setErrorMessage('파일 크기는 최대 200MB까지만 허용됩니다.');
+      setErrorMessage(`파일 크기는 최대 ${mbNumber}MB까지만 허용됩니다.`);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
@@ -132,24 +135,28 @@ export const AdminPage = () => {
   // S3에 파일 업로드
   const uploadFileToS3 = async (url: string, file: File): Promise<boolean> => {
     try {
-      // ky 사용하여 PUT 요청으로 파일 업로드
       const response = await ky.put(url, {
         body: file,
         headers: {
           'Content-Type': 'video/mp4',
         },
-        // ky는 기본적으로 credentials를 same-origin으로 설정함
+        timeout: 100000,
+        // onUploadProgress: (progress) => {
+        //   // percent: 0~1, transferredBytes: 업로드된 바이트, totalBytes: 전체 바이트
+        //   setUploadProgress(Math.round(progress.percent * 100));
+        //   // 필요하다면 progress.transferredBytes, progress.totalBytes도 활용 가능
+        // },
       });
       if (!response.ok) {
         throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
       }
-      // 성공시 true 리턴
       return response.ok;
     } catch (error) {
       console.error('S3 파일 업로드 실패:', error);
       throw error;
     }
   };
+
 
   // 프리사인드 URL에서 S3 파일명 추출
   const extractS3FileNameFromUrl = (url: string): string => {
@@ -181,7 +188,7 @@ export const AdminPage = () => {
     try {
       setIsUploading(true);
       setErrorMessage('');
-      setUploadProgress(10);
+      // setUploadProgress(10);
       
       // 1. 프리사인드 URL 요청
       const presignedData = await getPresignedUrl();
@@ -299,7 +306,7 @@ export const AdminPage = () => {
             <div className="space-y-6">
               {/* 파일 업로드 */}
               <div>
-                <label className="block text-sm font-medium mb-2">영화 파일 (MP4만 가능, 최대 200MB)</label>
+                <label className="block text-sm font-medium mb-2">영화 파일 (MP4만 가능, 최대 {mbFileSize}MB)</label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -328,7 +335,7 @@ export const AdminPage = () => {
                 </div>
               )}
               
-              {/* 업로드 진행 상태 */}
+              {/* 업로드 진행 상황 */}
               {isUploading && uploadProgress > 0 && (
                 <div className="mt-4">
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
