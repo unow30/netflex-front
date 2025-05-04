@@ -160,7 +160,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         <video
           ref={videoRef}
           poster={poster}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           style={{ background: 'black' }}
           muted={muted}
           autoPlay={autoPlay}
