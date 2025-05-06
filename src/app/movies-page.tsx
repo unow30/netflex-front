@@ -113,6 +113,12 @@ export const MoviesPage = () => {
                     src={movie.movieFileName}
                     alt={movie.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null; // prevent infinite loop
+                      target.style.backgroundColor = "#000"; // set black background
+                      target.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; // transparent 1px gif
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">

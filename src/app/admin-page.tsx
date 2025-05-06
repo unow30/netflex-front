@@ -360,11 +360,11 @@ export const AdminPage = () => {
               {/* 영화 정보 입력 (S3 업로드 완료 시에만 표시) */}
               {s3UploadComplete && (
                 <>
-                  <div className="mt-6 border-t pt-6">
+                  <div className="mt-6">
                     <h3 className="text-lg font-medium mb-4">영화 정보 등록</h3>
                     
                     {/* S3 파일명 표시 (읽기 전용) */}
-                    <div className="mb-4">
+                    <div className="mt-6 border-t-4 pt-6">
                       <label className="block text-sm font-medium mb-2">S3 파일명 (변경 불가)</label>
                       <input
                         type="text"
@@ -376,7 +376,7 @@ export const AdminPage = () => {
                     </div>
                     
                     {/* 영화 제목 */}
-                    <div className="mb-4">
+                    <div className="mt-6 border-t-4 pt-6">
                       <label htmlFor="title" className="block text-sm font-medium mb-2">영화 제목</label>
                       <input
                         id="title"
@@ -390,7 +390,7 @@ export const AdminPage = () => {
                     </div>
                     
                     {/* 영화 설명 */}
-                    <div className="mb-4">
+                    <div className="mt-6 border-t-4 pt-6">
                       <label htmlFor="detail" className="block text-sm font-medium mb-2">영화 설명 (필수)</label>
                       <textarea
                         id="detail"
@@ -404,7 +404,7 @@ export const AdminPage = () => {
                     </div>
                     
                     {/* 감독 선택 */}
-                    <div className="mb-4">
+                    <div className="mt-6 border-t-4 pt-6">
                       <label htmlFor="director" className="block text-sm font-medium mb-2">감독 (필수)</label>
                       <select
                         id="director"
@@ -422,7 +422,7 @@ export const AdminPage = () => {
                     </div>
                     
                     {/* 장르 선택 (1-3개) */}
-                    <div className="mb-4">
+                    <div className="mt-6 border-t-4 pt-6">
                       <label className="block text-sm font-medium mb-2">장르 (1-3개 선택)</label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         {genres.map(genre => (
@@ -445,7 +445,7 @@ export const AdminPage = () => {
                     </div>
                     
                     {/* 영화 등록 버튼 */}
-                    <div className="mt-6">
+                    <div className="mt-6 border-t-4 pt-6">
                       <button
                         onClick={handleMovieRegistration}
                         disabled={isUploading}
