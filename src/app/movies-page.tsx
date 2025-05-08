@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Layout } from '../components/layout/layout';
 import { MovieDto } from '../types';
 import { extractErrorMessage } from '../utils/errorMessage';
+import { getFirstThumbnailFromHls } from '../utils/thumbnailUtils';
 
 export const MoviesPage = () => {
   const [movies, setMovies] = useState<MovieDto[]>([]);
@@ -110,7 +111,7 @@ export const MoviesPage = () => {
               <div className="aspect-video bg-gray-200 dark:bg-gray-700">
                 {movie.movieFileName ? (
                   <img 
-                    src={movie.movieFileName}
+                    src={getFirstThumbnailFromHls(movie.movieFileName)}
                     alt={movie.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {

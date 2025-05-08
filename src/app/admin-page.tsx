@@ -118,7 +118,7 @@ export const AdminPage = () => {
   // 프리사인드 URL 가져오기
   const getPresignedUrl = async (): Promise<PresignedUrlResponse> => {
     try {
-      const response = await api.post('common/presigned-url').json<ApiResponse<PresignedUrlResponse[]>>();
+      const response = await api.post('v1/common/presigned-url').json<ApiResponse<PresignedUrlResponse[]>>();
       const presignedData = extractData(response);
       
       if (presignedData.length > 0) {
