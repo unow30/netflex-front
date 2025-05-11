@@ -18,6 +18,7 @@ export const MoviesPage = () => {
         // 동적으로 서비스 로드
         const { movieService } = await import('../services/movie.service');
         const result = await movieService.getMovies();
+        console.log('result',result)
         // 응답 형식에 따라 데이터 설정
         if (result.data) {
           setMovies(result.data);

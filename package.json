@@ -7,6 +7,7 @@
     "start": "npx cross-env NODE_ENV=production webpack serve --mode production",
     "start:dev": "npx cross-env NODE_ENV=development webpack serve --mode development",
     "build": "npx cross-env NODE_ENV=production webpack --mode production",
+    "analyze": "npx cross-env NODE_ENV=production ANALYZE=true webpack --mode production",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -52,6 +53,7 @@
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
     "webpack": "^5.99.5",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.1"
   }

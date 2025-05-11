@@ -1,8 +1,7 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, lazy, Suspense} from 'react';
 import {useParams, Link} from 'react-router-dom';
 import {Layout} from '../components/layout/layout';
 import {MovieDto} from '../types';
-import {HLSVideoPlayer} from '../components/video/HLSVideoPlayer';
 import {extractErrorMessage} from '../utils/errorMessage';
 import ky from 'ky';
 
@@ -15,6 +14,10 @@ interface ThumbnailInfo {
     url: string;
     time: number;
 }
+
+const HLSVideoPlayer = lazy(() => import('../components/video/HLSVideoPlayer').then(module => ({
+    default: module.HLSVideoPlayer
+})));
 
 export const MovieDetailPage = () => {
     const {id} = useParams<{ id: string }>();
@@ -68,12 +71,14 @@ export const MovieDetailPage = () => {
                     <div className="text-xl text-red-600 mb-4">{error}</div>
                 )}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-                    <HLSVideoPlayer
-                        videoUrl={movie?.movieFileName || getFallbackMovieUrl(id)}
-                        autoPlay={true}
-                        poster={movie?.movieFileName}
-                        muted={false}
-                    />
+                    <Suspense fallback={<div className="aspect-video bg-gray-800 flex items-center justify-center text-white">로딩중...</div>}>
+                        <HLSVideoPlayer
+                            videoUrl={movie?.movieFileName || getFallbackMovieUrl(id)}
+                            autoPlay={true}
+                            poster={movie?.movieFileName}
+                            muted={false}
+                        />
+                    </Suspense>
                     {movie && (
                         <div className="p-6">
                             <div className="flex justify-between items-start mb-4">
