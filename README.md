@@ -3,11 +3,10 @@
 NetFlex2는 영화 정보, 장르 정보, 감독 정보를 제공하는 스트리밍 서비스의 프론트엔드 애플리케이션입니다.
 
 ## 기술 문서 바로가기
-
-- [1.HLS(HTTP Live Streaming) 프로토콜](./docs/video-player.md#개요)
-- [2.AWS Media Convert를 이용한 영상파일 변환 로직](./docs/video-player.md#vtt-파일-형식)
-- [3.HLS Player 구현](./docs/video-player.md#hlsvideoplayer)
-- [4.썸네일 미리보기 기능 구현과정](./docs/video-player.md#videothumbnailpreview)
+- [1. HLS(HTTP Live Streaming) 프로토콜.md](docs/1.%20HLS%28HTTP%20Live%20Streaming%29%20%ED%94%84%EB%A1%9C%ED%86%A0%EC%BD%9C.md)
+- [2. aws media convert를 이용한 영상파일 변환 로직.md](docs/2.%20aws%20media%20convert%EB%A5%BC%20%EC%9D%B4%EC%9A%A9%ED%95%9C%20%EC%98%81%EC%83%81%ED%8C%8C%EC%9D%BC%20%EB%B3%80%ED%99%98%20%EB%A1%9C%EC%A7%81.md)
+- [3. HLS player 구현.md](docs/3.%20HLS%20player%20%EA%B5%AC%ED%98%84.md)
+- [4. 썸네일 미리보기 기능 구현과정.md](docs/4.%20%EC%8D%B8%EB%84%A4%EC%9D%BC%20%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%20%EA%B8%B0%EB%8A%A5%20%EA%B5%AC%ED%98%84%EA%B3%BC%EC%A0%95.md)
 
 ## 기능
 
@@ -111,7 +110,7 @@ netflex-front/
 
 ## API 연결
 
-이 프론트엔드는 `https://api.ceramic-tager.store`에서 실행되는 백엔드 API에 연결됩니다.
+이 프론트엔드는 `https://api.ceramic-tager.store`에서 실행되는 백엔드 API에 연결됩니다. 
 
 ### API 구조
 
