@@ -19,7 +19,7 @@ export const Navbar = React.memo(() => {
     <nav className="bg-red-700 dark:bg-black px-6 py-3 flex justify-center shadow-md max-w-screen-xl mx-auto z-10">
       <div className="max-w-screen-xl mx-auto flex items-center justify-start space-x-6">
         <div className="flex items-center">
-          <Link to="/" className="text-white text-2xl font-bold">NETFLEX</Link>
+          <Link to="/" className="text-white text-2xl font-bold">NETFLEX2</Link>
         </div>
         
         <div className="flex items-center space-x-6">

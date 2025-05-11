@@ -29,7 +29,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
       <footer className="bg-red-700 dark:bg-black text-white p-4 text-center">
         <div className="max-w-screen-xl mx-auto">
-          <p>© {new Date().getFullYear()} Netflex. All rights reserved.</p>
+          <p> {new Date().getFullYear()} Netflex2. All rights reserved.</p>
+          <p className="mt-2">이 사이트는 포트폴리오 사이트입니다.</p>
         </div>
       </footer>
     </div>
