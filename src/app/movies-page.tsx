@@ -44,10 +44,23 @@ export const MoviesPage = () => {
     if (searchValue.trim() === '') {
       setFilteredMovies(movies);
     } else {
-      // 프론트엔드에서 검색 처리
-      const filtered = movies.filter(movie => 
-        movie.title.toLowerCase().includes(searchValue.toLowerCase())
-      );
+      // 프론트엔드에서 검색 처리 - 정규화 과정을 거쳐 한글 검색 개선
+      const normalizedSearchValue = searchValue.trim().normalize('NFC').toLowerCase();
+      
+      const filtered = movies.filter(movie => {
+        // 영화 제목을 정규화하여 비교
+        const normalizedTitle = movie.title.normalize('NFC').toLowerCase();
+        
+        // 감독 이름도 정규화하여 비교
+        const normalizedDirectorName = movie.director 
+          ? movie.director.name.normalize('NFC').toLowerCase() 
+          : '';
+        
+        // 제목 또는 감독 이름에 검색어가 포함되어 있으면 표시
+        return normalizedTitle.includes(normalizedSearchValue) || 
+               normalizedDirectorName.includes(normalizedSearchValue);
+      });
+      
       setFilteredMovies(filtered);
     }
   };
