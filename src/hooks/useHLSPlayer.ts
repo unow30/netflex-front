@@ -7,13 +7,106 @@ const loadHls = async () => {
   return Hls;
 };
 
+// 썸네일 데이터 인터페이스
+interface ThumbnailData {
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export const useHLSPlayer = (src: string, autoPlay = false) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [thumbnails, setThumbnails] = useState<Map<number, ThumbnailData>>(new Map());
   const [thumbnailsLoaded, setThumbnailsLoaded] = useState(false);
-  const thumbnailsRef = useRef<Record<number, string>>({});
+
+  // VTT 파일에서 썸네일 정보 파싱 함수
+  const parseVttForThumbnails = async (vttUrl: string) => {
+    try {
+      const response = await fetch(vttUrl);
+      if (!response.ok) {
+        throw new Error(`VTT 파일을 로드할 수 없습니다. 상태: ${response.status}`);
+      }
+
+      const text = await response.text();
+      const lines = text.split('\n');
+      const newThumbnails = new Map<number, ThumbnailData>();
+      let currentTime = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('-->')) {
+          const times = line.split('-->').map(t => t.trim());
+          const startTime = parseTimeToSeconds(times[0]);
+          currentTime = startTime;
+          
+          if (i + 1 < lines.length) {
+            const thumbnailLine = lines[i + 1].trim();
+            if (thumbnailLine && thumbnailLine.includes('#xywh=')) {
+              try {
+                const [imagePath, coordinatesPart] = thumbnailLine.split('#xywh=');
+                if (!imagePath || !coordinatesPart) continue;
+                
+                const [x, y, width, height] = coordinatesPart.split(',').map(Number);
+                if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) continue;
+                
+                const absoluteImageUrl = imagePath.startsWith('http')
+                  ? imagePath
+                  : new URL(imagePath, vttUrl).href;
+                  
+                newThumbnails.set(currentTime, {
+                  url: absoluteImageUrl,
+                  x, y, width, height
+                });
+              } catch (err) {
+                // ignore parse error
+              }
+            }
+          }
+        }
+      }
+      
+      if (newThumbnails.size > 0) {
+        setThumbnails(newThumbnails);
+        setThumbnailsLoaded(true);
+      } else {
+        setThumbnailsLoaded(false);
+      }
+    } catch (err) {
+      console.error('VTT 파싱 오류:', err);
+      setThumbnailsLoaded(false);
+    }
+  };
+
+  // 시간 문자열을 초 단위로 변환
+  const parseTimeToSeconds = (timeString: string): number => {
+    const parts = timeString.split(':');
+    let seconds = 0;
+    if (parts.length === 3) {
+      seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+    } else if (parts.length === 2) {
+      seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+    }
+    return seconds;
+  };
+
+  // 특정 시간의 썸네일 데이터 가져오기
+  const getThumbnailAt = (time: number): ThumbnailData | null => {
+    if (!thumbnailsLoaded || thumbnails.size === 0) return null;
+    
+    const timeKeys = Array.from(thumbnails.keys()).sort((a, b) => a - b);
+    if (timeKeys.length === 0) return null;
+    
+    const closestTime = timeKeys.reduce((prev, curr) =>
+      Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev, timeKeys[0]
+    );
+    
+    return thumbnails.get(closestTime) || null;
+  };
 
   useEffect(() => {
     let hls: any = null;
@@ -43,6 +136,15 @@ export const useHLSPlayer = (src: string, autoPlay = false) => {
             }
           }
           setLoading(false);
+          
+          // 썸네일 VTT 파일 로드 시도
+          try {
+            const baseUrl = src.substring(0, src.lastIndexOf('/') + 1);
+            const vttUrl = `${baseUrl}origin_segment_Thumbnail_I-Frame.vtt`;
+            parseVttForThumbnails(vttUrl);
+          } catch (err) {
+            console.error('썸네일 로드 실패:', err);
+          }
         } else {
           // HLS.js 사용 (Chrome, Firefox 등)
           try {
@@ -55,6 +157,7 @@ export const useHLSPlayer = (src: string, autoPlay = false) => {
                 // HLS 구성 옵션
                 maxBufferLength: 30,
                 maxMaxBufferLength: 60,
+                enableWorker: true,
               });
               
               hlsRef.current = hls;
@@ -69,6 +172,34 @@ export const useHLSPlayer = (src: string, autoPlay = false) => {
                   } catch (err) {
                     console.log('자동 재생 실패:', err);
                   }
+                }
+                
+                // 썸네일 VTT 파일 로드 시도
+                try {
+                  // 소스 URL에서 기본 경로 추출
+                  const sourceUrl = new URL(src);
+                  const baseUrl = sourceUrl.href.substring(0, sourceUrl.href.lastIndexOf('/') + 1);
+                  const vttFileName = 'origin_segment_Thumbnail_I-Frame.vtt';
+                  
+                  // 자막 트랙에서 썸네일 VTT 찾기
+                  const subtitleTracks = hls.subtitleTracks || [];
+                  if (subtitleTracks.length > 0) {
+                    const vttTrack = subtitleTracks.find((track: any) =>
+                      track.url && track.url.includes('.vtt')
+                    );
+                    if (vttTrack && vttTrack.url) {
+                      if (vttTrack.url.includes('Thumbnail')) {
+                        parseVttForThumbnails(vttTrack.url);
+                        return;
+                      }
+                    }
+                  }
+                  
+                  // 직접 VTT URL 생성 시도
+                  const vttUrl = `${baseUrl}${vttFileName}`;
+                  parseVttForThumbnails(vttUrl);
+                } catch (err) {
+                  console.error('썸네일 로드 실패:', err);
                 }
               });
 
@@ -89,8 +220,6 @@ export const useHLSPlayer = (src: string, autoPlay = false) => {
                   }
                 }
               });
-
-              // 썸네일 추출 관련 로직은 필요할 때 처리
 
             } else {
               setError('HLS를 지원하지 않는 브라우저입니다.');
@@ -116,12 +245,6 @@ export const useHLSPlayer = (src: string, autoPlay = false) => {
       }
     };
   }, [src, autoPlay]);
-
-  // 썸네일 가져오기 함수
-  const getThumbnailAt = (time: number): string | null => {
-    // 썸네일 관련 로직을 필요할 때만 동적으로 처리
-    return null;
-  };
 
   return { videoRef, loading, error, getThumbnailAt, thumbnailsLoaded };
 };
