@@ -1,15 +1,19 @@
 # Netflex Frontend
 
-NetFlex는 영화 정보, 장르 정보, 감독 정보를 제공하는 스트리밍 서비스의 프론트엔드 애플리케이션입니다.
+NetFlex2는 영화 정보, 장르 정보, 감독 정보를 제공하는 스트리밍 서비스의 프론트엔드 애플리케이션입니다.
 
-![Netflex Logo](./public/logo.png)
+## 기술 문서 바로가기
+
+- [1.HLS(HTTP Live Streaming) 프로토콜](./docs/video-player.md#개요)
+- [2.AWS Media Convert를 이용한 영상파일 변환 로직](./docs/video-player.md#vtt-파일-형식)
+- [3.HLS Player 구현](./docs/video-player.md#hlsvideoplayer)
+- [4.썸네일 미리보기 기능 구현과정](./docs/video-player.md#videothumbnailpreview)
 
 ## 기능
 
 - 사용자 인증 (로그인, 회원가입)
 - 영화 목록 조회 및 검색
 - 영화 상세 정보 조회 및 재생
-- 영화 좋아요 기능
 - 감독 및 장르 정보 조회
 - 다크 모드 지원
 - 반응형 디자인으로 모바일 환경 지원
@@ -52,9 +56,6 @@ pnpm start:dev
 # 프로덕션 모드로 실행
 pnpm start
 ```
-
-개발 서버는 기본적으로 http://localhost:3010 에서 실행됩니다.
-
 ### 빌드
 
 ```bash
@@ -110,7 +111,7 @@ netflex-front/
 
 ## API 연결
 
-이 프론트엔드는 `http://localhost:3000`에서 실행되는 백엔드 API에 연결됩니다. API 엔드포인트는 `/api` 경로를 통해 접근합니다.
+이 프론트엔드는 `https://api.ceramic-tager.store`에서 실행되는 백엔드 API에 연결됩니다.
 
 ### API 구조
 
@@ -145,6 +146,19 @@ netflex-front/
 
 - 모바일, 태블릿, 데스크탑 등 다양한 화면 크기에 최적화
 - Tailwind의 브레이크포인트를 활용한 반응형 레이아웃
+
+## 프로젝트 문서
+
+프로젝트의 상세 문서는 `docs/` 디렉토리에 마크다운 파일로 정리되어 있습니다. 주요 문서는 다음과 같습니다:
+
+- **비디오 플레이어**: [비디오 플레이어 문서](./docs/video-player.md) - 비디오 플레이어 컴포넌트와 관련 기능에 대한 상세 설명
+
+GitHub에서 볼 때 문서 파일들은 마크다운 형식으로 표시됩니다. 문서에 사용되는 이미지나 기타 자산은 `docs/assets/` 폴더에 저장됩니다.
+
+마크다운 파일에서 이미지를 참조할 때는 다음과 같이 사용합니다:
+```markdown
+![예시 이미지](./docs/assets/example-image.png)
+```
 
 ## 배포
 
