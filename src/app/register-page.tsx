@@ -8,6 +8,7 @@ export const RegisterPage = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const { register, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -48,9 +49,14 @@ export const RegisterPage = () => {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setFocusedInput('email')}
+              onBlur={() => setFocusedInput(null)}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
+            {focusedInput === 'email' && (
+              <p className="text-xs text-gray-500 mt-1">실제 이메일 검증은 하지 않습니다</p>
+            )}
           </div>
           
           <div className="mb-4">
@@ -59,10 +65,16 @@ export const RegisterPage = () => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              maxLength={10}
+              onChange={(e) => setPassword(e.target.value.slice(0, 10))}
+              onFocus={() => setFocusedInput('password')}
+              onBlur={() => setFocusedInput(null)}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
+            {focusedInput === 'password' && (
+              <p className="text-xs text-gray-500 mt-1">최대 10자 이내의 문자열을 입력합니다.</p>
+            )}
           </div>
           
           <div className="mb-6">
@@ -71,10 +83,16 @@ export const RegisterPage = () => {
               type="password"
               id="confirmPassword"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              maxLength={10}
+              onChange={(e) => setConfirmPassword(e.target.value.slice(0, 10))}
+              onFocus={() => setFocusedInput('confirmPassword')}
+              onBlur={() => setFocusedInput(null)}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               required
             />
+            {focusedInput === 'confirmPassword' && (
+              <p className="text-xs text-gray-500 mt-1">최대 10자 이내의 문자열을 입력합니다.</p>
+            )}
           </div>
           
           <button
