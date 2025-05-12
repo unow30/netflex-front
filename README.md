@@ -158,23 +158,3 @@ GitHub에서 볼 때 문서 파일들은 마크다운 형식으로 표시됩니�
 ```markdown
 ![예시 이미지](./docs/assets/example-image.png)
 ```
-
-## 배포
-
-프로젝트는 다음과 같은 방법으로 배포할 수 있습니다:
-
-1. 정적 호스팅 서비스 (Netlify, Vercel 등)
-2. Docker 컨테이너를 통한 배포
-3. 클라우드 서비스 (AWS, GCP 등)
-
-## 기여하기
-
-1. 이 저장소를 포크합니다
-2. 새 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'Add some amazing feature'`)
-4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`)
-5. Pull Request를 생성합니다
-
-## 라이센스
-
-[MIT](LICENSE) 라이센스 하에 배포됩니다.
