@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { Layout } from '../components/layout/layout';
 import { Director, Genre, CreateMovieDto } from '../types';
-import { api, extractData, ApiResponse } from '../services/api';
+import { api } from '../services/api';
 import { extractErrorMessage } from '../utils/errorMessage';
-import ky from 'ky'; // ky import 추가
 
 // 프리사인드 URL 응답 타입
 interface PresignedUrlResponse {
@@ -118,10 +117,9 @@ export const AdminPage = () => {
   // 프리사인드 URL 가져오기
   const getPresignedUrl = async (): Promise<PresignedUrlResponse> => {
     try {
-      const response = await api.post('v1/common/presigned-url').json<ApiResponse<PresignedUrlResponse[]>>();
-      const presignedData = extractData(response);
+      const presignedData = await api.post<PresignedUrlResponse[]>('v1/common/presigned-url');
       
-      if (presignedData.length > 0) {
+      if (presignedData && presignedData.length > 0) {
         return presignedData[0];
       }
       
@@ -135,28 +133,46 @@ export const AdminPage = () => {
   // S3에 파일 업로드
   const uploadFileToS3 = async (url: string, file: File): Promise<boolean> => {
     try {
-      const response = await ky.put(url, {
-        body: file,
-        headers: {
-          'Content-Type': 'video/mp4',
-        },
-        timeout: 100000,
-        // onUploadProgress: (progress) => {
-        //   // percent: 0~1, transferredBytes: 업로드된 바이트, totalBytes: 전체 바이트
-        //   setUploadProgress(Math.round(progress.percent * 100));
-        //   // 필요하다면 progress.transferredBytes, progress.totalBytes도 활용 가능
-        // },
+      // Upload progress tracking
+      let uploadProgress = 0;
+      const xhr = new XMLHttpRequest();
+      
+      // 업로드 진행 상황 추적을 위한 Promise 구현
+      return new Promise<boolean>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentage = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentage);
+          }
+        });
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(true);
+          } else {
+            reject(new Error(`파일 업로드 실패: ${xhr.status} ${xhr.statusText}`));
+          }
+        };
+        
+        xhr.onerror = () => {
+          reject(new Error('네트워크 오류로 파일 업로드 실패'));
+        };
+        
+        xhr.ontimeout = () => {
+          reject(new Error('타임아웃으로 파일 업로드 실패'));
+        };
+        
+        // PUT 요청 보내기
+        xhr.open('PUT', url);
+        xhr.setRequestHeader('Content-Type', 'video/mp4');
+        xhr.timeout = 100000;
+        xhr.send(file);
       });
-      if (!response.ok) {
-        throw new Error(`파일 업로드 실패: ${response.status} ${response.statusText}`);
-      }
-      return response.ok;
     } catch (error) {
       console.error('S3 파일 업로드 실패:', error);
       throw error;
     }
   };
-
 
   // 프리사인드 URL에서 S3 파일명 추출
   const extractS3FileNameFromUrl = (url: string): string => {
@@ -269,7 +285,7 @@ export const AdminPage = () => {
       };
       
       // 영화 데이터 서버에 전송
-      const response = await api.post('movie', { json: movieData }).json<ApiResponse<any>>();
+      const response = await api.post('movie', movieData);
 
       setUploadSuccess(true);
       // 폼 초기화

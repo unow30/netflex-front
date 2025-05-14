@@ -1,35 +1,24 @@
 import { CreateDirectorDto, Director, UpdateDirectorDto } from '../types';
-import { ApiResponse, api, extractData } from './api';
+import { api } from './api';
 
 export const directorService = {
   async getDirectors(): Promise<Director[]> {
-    const response = await api.get('director').json<ApiResponse<Director[]>>();
-    return extractData(response);
+    return await api.get<Director[]>('director');
   },
 
   async getDirector(id: number): Promise<Director> {
-    const response = await api.get(`director/${id}`).json<ApiResponse<Director>>();
-    return extractData(response);
+    return await api.get<Director>(`director/${id}`);
   },
 
   async createDirector(directorData: CreateDirectorDto): Promise<Director> {
-    const response = await api.post('director', {
-      json: directorData
-    }).json<ApiResponse<Director>>();
-    
-    return extractData(response);
+    return await api.post<Director>('director', directorData);
   },
 
   async updateDirector(id: number, directorData: UpdateDirectorDto): Promise<Director> {
-    const response = await api.patch(`director/${id}`, {
-      json: directorData
-    }).json<ApiResponse<Director>>();
-    
-    return extractData(response);
+    return await api.patch<Director>(`director/${id}`, directorData);
   },
 
   async deleteDirector(id: number): Promise<{ id: number }> {
-    const response = await api.delete(`director/${id}`).json<ApiResponse<{ id: number }>>();
-    return extractData(response);
+    return await api.delete<{ id: number }>(`director/${id}`);
   }
-}; 
+};

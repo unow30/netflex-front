@@ -1,48 +1,45 @@
 import { CreateMovieDto, GetMoviesDto, Movie, MovieDto, MovieListRecentDto, MovieListResponseDto, UpdateMovieDto } from '../types';
-import { ApiResponse, api, extractData } from './api';
+import { api, ExtendedRequestInit } from './api';
 
 export const movieService = {
   async getMovies(params?: GetMoviesDto): Promise<MovieListResponseDto> {
-    const response = await api.get('movie', {
-      searchParams: params as Record<string, string | number | boolean>
-    }).json<ApiResponse<MovieListResponseDto>>();
+    const searchParams: Record<string, string> = {};
     
-    return extractData(response);
+    // GetMoviesDto를 searchParams로 변환
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams[key] = String(value);
+        }
+      });
+    }
+    
+    return await api.get<MovieListResponseDto>('movie', {
+      searchParams
+    });
   },
 
   async getRecentMovies(): Promise<MovieListRecentDto[]> {
-    const response = await api.get('movie/recent').json<ApiResponse<MovieListRecentDto[]>>();
-    return extractData(response);
+    return await api.get<MovieListRecentDto[]>('movie/recent');
   },
 
   async getMovie(id: number): Promise<MovieDto> {
-    const response = await api.get(`movie/${id}`).json<ApiResponse<MovieDto>>();
-    return extractData(response);
+    return await api.get<MovieDto>(`movie/${id}`);
   },
 
   async createMovie(movieData: CreateMovieDto): Promise<MovieDto> {
-    const response = await api.post('movie', {
-      json: movieData
-    }).json<ApiResponse<MovieDto>>();
-    
-    return extractData(response);
+    return await api.post<MovieDto>('movie', movieData);
   },
 
   async updateMovie(id: number, movieData: UpdateMovieDto): Promise<MovieDto> {
-    const response = await api.patch(`movie/${id}`, {
-      json: movieData
-    }).json<ApiResponse<MovieDto>>();
-    
-    return extractData(response);
+    return await api.patch<MovieDto>(`movie/${id}`, movieData);
   },
 
   async deleteMovie(id: number): Promise<{ id: number }> {
-    const response = await api.delete(`movie/${id}`).json<ApiResponse<{ id: number }>>();
-    return extractData(response);
+    return await api.delete<{ id: number }>(`movie/${id}`);
   },
 
   async likeMovie(id: number): Promise<MovieDto> {
-    const response = await api.post(`movie/${id}/like`).json<ApiResponse<MovieDto>>();
-    return extractData(response);
+    return await api.post<MovieDto>(`movie/${id}/like`);
   }
-}; 
+};

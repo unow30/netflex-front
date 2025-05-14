@@ -3,7 +3,6 @@ import {useParams, Link} from 'react-router-dom';
 import {Layout} from '../components/layout/layout';
 import {MovieDto} from '../types';
 import {extractErrorMessage} from '../utils/errorMessage';
-import ky from 'ky';
 
 const getFallbackMovieUrl = (id?: string) => {
     if (!id) return '';
@@ -44,13 +43,11 @@ export const MovieDetailPage = () => {
     const handleLike = async () => {
         if (!movie) return;
         try {
-            const response = await ky.post(`/api/movie/${movie.id}/like`);
-            if (response.ok) {
-                const updatedMovie = await response.json<any>();
-                setMovie(updatedMovie.data);
-            }
+            const { movieService } = await import('../services/movie.service');
+            const updatedMovie = await movieService.likeMovie(movie.id);
+            setMovie(updatedMovie);
         } catch (error) {
-            setError(await extractErrorMessage(error));
+            console.error('영화 좋아요 실패:', error);
         }
     };
 
