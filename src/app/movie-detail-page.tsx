@@ -3,6 +3,7 @@ import {useParams, Link} from 'react-router-dom';
 import {Layout} from '../components/layout/layout';
 import {MovieDto} from '../types';
 import {extractErrorMessage} from '../utils/errorMessage';
+import { getMediaConvertJobId } from '../utils/thumbnailUtils';
 
 const getFallbackMovieUrl = (id?: string) => {
     if (!id) return '';
@@ -23,6 +24,8 @@ export const MovieDetailPage = () => {
     const [movie, setMovie] = useState<MovieDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [jobId, setJobId] = useState<string | null>(null);
+    const [jobIdLoading, setJobIdLoading] = useState(false);
 
     useEffect(() => {
         const fetchMovie = async () => {
@@ -32,6 +35,14 @@ export const MovieDetailPage = () => {
                 const result = await movieService.getMovie(parseInt(id, 10));
                 setMovie(result);
                 setLoading(false);
+                
+                // 영화 데이터를 불러온 후, m3u8 파일의 헤더를 확인하여 jobId 가져오기
+                if (result.movieFileName) {
+                    setJobIdLoading(true);
+                    const mediaJobId = await getMediaConvertJobId(result.movieFileName);
+                    setJobId(mediaJobId);
+                    setJobIdLoading(false);
+                }
             } catch (error) {
                 setError(await extractErrorMessage(error));
                 setLoading(false);
@@ -87,6 +98,18 @@ export const MovieDetailPage = () => {
                                     좋아요 ({movie.likeCount})
                                 </button>
                             </div>
+                            
+                            {/* MediaConvert Job ID 표시 */}
+                            {jobIdLoading ? (
+                                <div className="mb-3 text-sm text-gray-500">영상 변환 중...</div>
+                            ) : jobId ? (
+                                <div className="mb-3 text-sm text-gray-500">
+                                    <span className="font-medium">MediaConvert Job ID:</span> {jobId}
+                                </div>
+                            ) : (
+                                <div className="mb-3 text-sm text-gray-500">MediaConvert Job ID를 찾을 수 없습니다.</div>
+                            )}
+                            
                             <div className="mb-4">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">감독:</span>
                                 <span className="ml-2 font-medium">{movie.director.name}</span>
