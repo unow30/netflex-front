@@ -16,7 +16,7 @@ interface ThumbnailData {
   height: number;
 }
 
-export const useHLSPlayer = (src: string, autoPlay = false) => {
+export const useHLSPlayer = (src: string, autoPlay = false, hasInteracted = false) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);

@@ -1,35 +1,20 @@
-import React from 'react';
-import { VideoThumbnailPreview } from './VideoThumbnailPreview';
+import React, { forwardRef } from 'react';
 
 interface ProgressBarProps {
   progress: number;
-  progressBarRef: React.RefObject<HTMLDivElement | null>;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave: () => void;
-  previewTime: number | null;
-  previewLeft: number;
-  getThumbnailAt: (time: number) => any;
-  thumbnailsLoaded: boolean;
-  videoElement: HTMLVideoElement | null;
-  progressBarRect: { left: number; width: number };
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({
+export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(({
   progress,
-  progressBarRef,
   onClick,
   onMouseMove,
-  onMouseLeave,
-  previewTime,
-  previewLeft,
-  getThumbnailAt,
-  thumbnailsLoaded,
-  videoElement,
-  progressBarRect
-}) => (
+  onMouseLeave
+}, ref) => (
   <div
-    ref={progressBarRef}
+    ref={ref}
     className="progress-container h-12 relative cursor-pointer bg-black/80 rounded mb-8 w-full mx-auto"
     onClick={onClick}
     onMouseMove={onMouseMove}
@@ -74,14 +59,5 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         zIndex: 12
       }}
     />
-    {/* 썸네일 등 추가 요소 */}
-    <VideoThumbnailPreview
-      videoElement={videoElement}
-      getThumbnailAt={getThumbnailAt}
-      thumbnailsLoaded={thumbnailsLoaded}
-      previewTime={previewTime}
-      left={previewLeft}
-      progressBarRect={progressBarRect}
-    />
   </div>
-);
+));

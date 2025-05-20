@@ -2,32 +2,38 @@ import React, { useState } from 'react';
 
 interface ControlRowProps {
   isPlaying: boolean;
-  onPlayPause: () => void;
-  showVolume: boolean;
-  setShowVolume: React.Dispatch<React.SetStateAction<boolean>>;
+  isMuted: boolean;
   volume: number;
-  onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  showVolume: boolean;
+  isFullscreen: boolean;
+  isTheaterMode: boolean;
   currentTime: number;
   formatTime: (seconds: number) => string;
+  onPlayPause: () => void;
+  onMute: () => void;
+  onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onVolumeEnter: () => void;
+  onVolumeLeave: () => void;
   onFullscreen: () => void;
-  fullscreen: boolean;
-  onToggleTheaterMode: () => void;
-  theaterMode: boolean;
+  onTheaterMode: () => void;
 }
 
 export const ControlRow: React.FC<ControlRowProps> = ({
   isPlaying,
-  onPlayPause,
-  showVolume,
-  setShowVolume,
+  isMuted,
   volume,
-  onVolumeChange,
+  showVolume,
+  isFullscreen,
+  isTheaterMode,
   currentTime,
   formatTime,
+  onPlayPause,
+  onMute,
+  onVolumeChange,
+  onVolumeEnter,
+  onVolumeLeave,
   onFullscreen,
-  fullscreen,
-  onToggleTheaterMode,
-  theaterMode
+  onTheaterMode
 }) => {
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -50,16 +56,22 @@ export const ControlRow: React.FC<ControlRowProps> = ({
       </div>
       <div className="relative">
         <button
-          onClick={() => setShowVolume(v => !v)}
+          onClick={onMute}
           className="volume-btn text-2xl ml-2"
-          onMouseEnter={() => setHovered('volume')}
-          onMouseLeave={() => setHovered(null)}
+          onMouseEnter={() => {
+            setHovered('volume');
+            onVolumeEnter();
+          }}
+          onMouseLeave={() => {
+            setHovered(null);
+            onVolumeLeave();
+          }}
         >
-          {volume === 0 ? '🔇' : '🔊'}
+          {isMuted || volume === 0 ? '🔇' : '🔊'}
         </button>
         {hovered === 'volume' && (
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/80 text-xs text-white z-50 pointer-events-none whitespace-nowrap">
-            볼륨
+            {isMuted ? '음소거 해제' : '음소거'}
           </span>
         )}
       </div>
@@ -90,13 +102,13 @@ export const ControlRow: React.FC<ControlRowProps> = ({
         </button>
         {hovered === 'fullscreen' && (
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/80 text-xs text-white z-50 pointer-events-none whitespace-nowrap">
-            {fullscreen ? '전체화면 나가기' : '전체화면'}
+            {isFullscreen ? '전체화면 나가기' : '전체화면'}
           </span>
         )}
       </div>
       <div className="relative">
         <button
-          onClick={onToggleTheaterMode}
+          onClick={onTheaterMode}
           className="theater-btn text-2xl ml-2"
           onMouseEnter={() => setHovered('theater')}
           onMouseLeave={() => setHovered(null)}

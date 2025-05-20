@@ -9,33 +9,82 @@ export const MoviesPage = () => {
   const [movies, setMovies] = useState<MovieDto[]>([]);
   const [filteredMovies, setFilteredMovies] = useState<MovieDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [take, setTake] = useState(20); // 기본값 20으로 설정하여 더 많은 영화를 한번에 보여줍니다
 
-  useEffect(() => {
-    const fetchMovies = async () => {
-      try {
-        // 동적으로 서비스 로드
-        const { movieService } = await import('../services/movie.service');
-        const result = await movieService.getMovies();
-        // 응답 형식에 따라 데이터 설정
-        if (result.data) {
+  const fetchMovies = async (cursor?: string) => {
+    try {
+      // 현재 불러오는 중인지 확인
+      if (cursor) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      // 동적으로 서비스 로드
+      const { movieService } = await import('../services/movie.service');
+      
+      // GetMoviesDto 파라미터 설정
+      const params = {
+        take,
+        cursor,
+        order: ['id_DESC']
+      };
+      
+      const result = await movieService.getMovies(params);
+      
+      if (result.data) {
+        console.log(result);
+        
+        // 다음 커서 값이 있는지 확인
+        if (result.nextCursor) {
+          setNextCursor(result.nextCursor);
+          setHasMore(true);
+        } else {
+          setNextCursor(null);
+          setHasMore(false);
+        }
+        
+        // 새 데이터 추가 또는 초기화
+        if (cursor) {
+          setMovies(prev => [...prev, ...result.data]);
+          setFilteredMovies(prev => [...prev, ...result.data]);
+        } else {
           setMovies(result.data);
           setFilteredMovies(result.data);
+        }
+      } else {
+        if (cursor) {
+          setMovies(prev => [...prev, ...(result as any)]);
+          setFilteredMovies(prev => [...prev, ...(result as any)]);
         } else {
           setMovies(result as any);
           setFilteredMovies(result as any);
         }
-      } catch (err) {
-        setError(await extractErrorMessage(err));
-        console.error(err);
-      } finally {
-        setLoading(false);
+        setHasMore(false);
       }
-    };
+    } catch (err) {
+      setError(await extractErrorMessage(err));
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
+  useEffect(() => {
     fetchMovies();
   }, []);
+
+  const loadMoreMovies = () => {
+    if (nextCursor && !loadingMore) {
+      fetchMovies(nextCursor);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchValue = e.target.value;
@@ -114,45 +163,59 @@ export const MoviesPage = () => {
           <p>검색 결과가 없습니다.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredMovies.map(movie => (
-            <Link 
-              key={movie.id} 
-              to={`/movies/${movie.id}`}
-              className="block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
-            >
-              <div className="aspect-video bg-gray-200 dark:bg-gray-700">
-                {movie.movieFileName ? (
-                  <img 
-                    src={getFirstThumbnailFromHls(movie.movieFileName)}
-                    alt={movie.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null; // prevent infinite loop
-                      target.style.backgroundColor = "#000"; // set black background
-                      target.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; // transparent 1px gif
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    이미지 없음
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h2 className="text-lg font-semibold mb-1">{movie.title}</h2>
-                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{movie.movieDetail?.detail}</p>
-                {movie.director && (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-                    감독: {movie.director.name}
-                  </p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredMovies.map(movie => (
+              <Link 
+                key={movie.id} 
+                to={`/movies/${movie.id}`}
+                className="block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="aspect-video bg-gray-200 dark:bg-gray-700">
+                  {movie.movieFileName ? (
+                    <img 
+                      src={getFirstThumbnailFromHls(movie.movieFileName)}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null; // prevent infinite loop
+                        target.style.backgroundColor = "#000"; // set black background
+                        target.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; // transparent 1px gif
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      이미지 없음
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h2 className="text-lg font-semibold mb-1">{movie.title}</h2>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">{movie.movieDetail?.detail}</p>
+                  {movie.director && (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+                      감독: {movie.director.name}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+          
+          {hasMore && (
+            <div className="flex justify-center mt-8 mb-6">
+              <button
+                onClick={loadMoreMovies}
+                disabled={loadingMore}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingMore ? '로딩 중...' : '더 보기'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </Layout>
   );
-}; 
+};

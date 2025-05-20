@@ -9,15 +9,20 @@ interface Props {
   poster?: string;
   className?: string;
   muted?: boolean;
+  initialTime?: number; // 초기 재생 시간 위치
+  hasInteracted?: boolean; // 사용자가 이미 상호작용했는지 여부
+  onTimeUpdate?: (currentTime: number) => void; // 재생 시간 업데이트 콜백
+  onMutedChange?: (isMuted: boolean) => void; // 음소거 상태 변경 콜백
 }
 
 export const HLSVideoPlayer: React.FC<Props> = ({
-  videoUrl, autoPlay, poster, className = '', muted = false
+  videoUrl, autoPlay, poster, className = '', muted = false,
+  initialTime = 0, hasInteracted = false, onTimeUpdate, onMutedChange
 }) => {
-  const { videoRef, loading, error, getThumbnailAt, thumbnailsLoaded } = useHLSPlayer(videoUrl, autoPlay);
+  const { videoRef, loading, error, getThumbnailAt, thumbnailsLoaded } = useHLSPlayer(videoUrl, autoPlay, hasInteracted);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(initialTime);
   const [duration, setDuration] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [previewTime, setPreviewTime] = useState<number | null>(null);
@@ -25,6 +30,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const [volume, setVolume] = useState(1);
   const [showVolume, setShowVolume] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
+  const [isMuted, setIsMuted] = useState(muted);
+  const initialTimeApplied = useRef(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +49,48 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     return () => window.removeEventListener('resize', updateRect);
   }, []);
 
+  // 초기 muted 상태 설정
+  useEffect(() => {
+    setIsMuted(muted);
+    if (videoRef.current) {
+      videoRef.current.muted = muted;
+    }
+  }, [muted]);
+
+  // 초기 재생 시간 설정
+  useEffect(() => {
+    if (videoRef.current && initialTime > 0 && !initialTimeApplied.current) {
+      videoRef.current.currentTime = initialTime;
+      initialTimeApplied.current = true;
+    }
+  }, [initialTime, videoRef.current]);
+
+  // 사용자 상호작용 상태에 따른 자동 재생 처리
+  useEffect(() => {
+    const tryAutoplay = async () => {
+      if (videoRef.current && hasInteracted) {
+        try {
+          // 자동 재생 시도
+          await videoRef.current.play();
+        } catch (error) {
+          console.warn('자동 재생 실패:', error);
+          // 음소거 상태로 다시 시도
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            try {
+              await videoRef.current.play();
+            } catch (innerError) {
+              console.error('음소거 상태에서도 자동 재생 실패:', innerError);
+            }
+          }
+        }
+      }
+    };
+    
+    tryAutoplay();
+  }, [hasInteracted, videoRef.current]);
+
   // 시간 포맷
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -53,26 +102,53 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    
     const onPlay = () => {
       setIsPlaying(true);
     };
+    
     const onPause = () => setIsPlaying(false);
-    const onTimeUpdate = () => {
+    
+    const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
+      
+      // 시간 업데이트 콜백 실행
+      if (onTimeUpdate) {
+        onTimeUpdate(video.currentTime);
+      }
     };
-    const onLoadedMetadata = () => setDuration(video.duration);
+    
+    const onLoadedMetadata = () => {
+      setDuration(video.duration);
+      // 초기 시간 설정이 필요하다면 여기서 설정
+      if (initialTime > 0 && !initialTimeApplied.current) {
+        video.currentTime = initialTime;
+        initialTimeApplied.current = true;
+      }
+    };
+    
+    const onVolumeChange = () => {
+      if (onMutedChange) {
+        onMutedChange(video.muted);
+      }
+      setIsMuted(video.muted);
+    };
+    
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
-    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', onLoadedMetadata);
+    video.addEventListener('volumechange', onVolumeChange);
+    
     return () => {
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
-      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      video.removeEventListener('volumechange', onVolumeChange);
     };
-  }, [videoRef]);
+  }, [videoRef, initialTime, onTimeUpdate, onMutedChange]);
 
   // 재생/일시정지
   const handlePlayPause = () => {
@@ -80,7 +156,20 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     if (!video) return;
     if (video.paused || video.ended) {
       if (video.ended) video.currentTime = 0;
-      video.play();
+      
+      // 사용자 상호작용을 통해 재생을 시도하는 경우
+      const playPromise = video.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('재생 에러:', error);
+          // 음소거 상태로 재생 시도
+          video.muted = true;
+          setIsMuted(true);
+          if (onMutedChange) onMutedChange(true);
+          video.play().catch(e => console.error('음소거 상태에서도 재생 실패:', e));
+        });
+      }
     } else {
       video.pause();
     }
@@ -118,9 +207,26 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     setVolume(v);
     if (videoRef.current) videoRef.current.volume = v;
   };
+  
+  // 음소거 토글
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+    
+    if (onMutedChange) {
+      onMutedChange(video.muted);
+    }
+  };
+  
   useEffect(() => {
-    if (videoRef.current) videoRef.current.volume = volume;
-  }, [volume, videoRef]);
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+      videoRef.current.muted = isMuted;
+    }
+  }, [volume, isMuted, videoRef]);
 
   // 전체화면 토글
   const handleFullscreen = () => {
@@ -152,48 +258,113 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           : "bg-black w-full max-w-3xl min-w-0 mx-auto video-player relative box-border mb-12 overflow-visible"
       }
       ref={videoContainerRef}
-      style={{ aspectRatio: '16/9', overflow: 'visible' }}
     >
-      <div className="w-full h-full flex flex-col min-w-0">
-        {loading && <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60 z-10">로딩 중...</div>}
-        {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/60 z-10">{error}</div>}
+      {/* 로딩 표시 */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 text-white">
+          <div className="text-xl">비디오 로딩 중...</div>
+        </div>
+      )}
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/70 text-white">
+          <div className="text-xl text-red-500">비디오를 로드할 수 없습니다: {error}</div>
+        </div>
+      )}
+
+      {/* 비디오 요소 */}
+      <div className="relative flex justify-center items-center">
         <video
           ref={videoRef}
-          poster={poster}
-          className="w-full h-full object-contain"
-          style={{ background: 'black' }}
-          muted={muted}
-          autoPlay={autoPlay}
-          tabIndex={-1}
+          preload="auto"
+          className="w-full h-auto"
           onClick={handlePlayPause}
-        />
+          playsInline
+          poster={poster}
+          data-has-interacted={hasInteracted ? 'true' : 'false'}
+        >
+          {videoUrl && <source src={videoUrl} type="application/x-mpegURL" />}
+          브라우저가 비디오를 지원하지 않습니다.
+        </video>
+
+        {/* 재생 버튼 중앙 오버레이 */}
+        {(!isPlaying || loading) && (
+          <div
+            className="absolute inset-0 flex items-center justify-center cursor-pointer"
+            onClick={handlePlayPause}
+          >
+            <div className="w-16 h-16 rounded-full bg-red-600/80 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 컨트롤 영역 */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-2">
+        {/* 프로그레스 바 */}
         <ProgressBar
           progress={progress}
-          progressBarRef={progressBarRef}
           onClick={handleProgressClick}
           onMouseMove={handleProgressMouseMove}
           onMouseLeave={handleProgressMouseLeave}
-          previewTime={previewTime}
-          previewLeft={previewLeft}
-          getThumbnailAt={getThumbnailAt}
-          thumbnailsLoaded={thumbnailsLoaded}
-          videoElement={videoRef.current}
-          progressBarRect={progressBarRect}
+          ref={progressBarRef}
         />
-        {/* 여백 div 제거: 일반/영화관/전체화면에서 동일하게 보이도록 롤백 */}
+
+        {/* 타임라인 위 썸네일 미리보기 */}
+        {previewTime !== null && thumbnailsLoaded && (
+          <div
+            className="absolute bottom-10 bg-black border border-gray-700 shadow-lg z-20"
+            style={{
+              left: `${Math.min(Math.max(0, previewLeft - 80), progressBarRect.width - 160)}px`,
+              transform: "translateX(0)",
+            }}
+          >
+            {getThumbnailAt && (
+              <div className="w-40 h-24 relative overflow-hidden bg-black/80">
+                {/* 썸네일 이미지 컨텐츠는 여기에 표시됩니다 */}
+                {previewTime !== null && getThumbnailAt(previewTime) && (
+                  <img
+                    src={getThumbnailAt(previewTime)?.url || ''}
+                    alt="thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            )}
+            <div className="p-1 text-xs text-center">{formatTime(previewTime)}</div>
+          </div>
+        )}
+
+        {/* 컨트롤 버튼 영역 */}
         <ControlRow
           isPlaying={isPlaying}
-          onPlayPause={handlePlayPause}
-          showVolume={showVolume}
-          setShowVolume={setShowVolume}
+          isMuted={isMuted}
           volume={volume}
-          onVolumeChange={handleVolumeChange}
+          showVolume={showVolume}
+          isFullscreen={fullscreen}
+          isTheaterMode={theaterMode}
           currentTime={currentTime}
           formatTime={formatTime}
+          onPlayPause={handlePlayPause}
+          onMute={toggleMute}
+          onVolumeChange={handleVolumeChange}
+          onVolumeEnter={() => setShowVolume(true)}
+          onVolumeLeave={() => setShowVolume(false)}
           onFullscreen={handleFullscreen}
-          fullscreen={fullscreen}
-          onToggleTheaterMode={() => setTheaterMode(v => !v)}
-          theaterMode={theaterMode}
+          onTheaterMode={() => setTheaterMode(!theaterMode)}
         />
       </div>
     </div>
