@@ -96,45 +96,48 @@ export const VideoThumbnailPreview: React.FC<Props> = ({
   }
   let previewTop = -displayHeight - 12; // progress bar 위에 뜨게
 
-  // background-size: 전체 원본 이미지 크기, background-position: -x, -y
-  const previewStyle: React.CSSProperties = {
-    width: `${displayWidth}px`,
-    height: `${displayHeight}px`,
-    left: previewLeft,
-    top: previewTop,
-    position: 'absolute',
-    zIndex: 10,
-    overflow: 'hidden',
-    pointerEvents: 'none',
-  };
-
   return (
     <div
-      className={`preview-thumbnail rounded overflow-hidden bg-black shadow-md flex flex-col items-center ${className}`}
-      style={previewStyle}
+      className={`preview-thumbnail rounded bg-black shadow-md ${className}`}
+      style={{
+        left: previewLeft,
+        top: previewTop,
+        position: 'absolute',
+        zIndex: 10,
+        pointerEvents: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
       ref={containerRef}
     >
       {!loaded && !error && LOADING_INDICATOR}
       {error && <div className="text-xs text-red-500 py-2">썸네일 오류</div>}
       {loaded && !error && (
-        <img
-          src={thumbnail.url}
-          alt="썸네일 미리보기"
+        <div
           style={{
-            width: thumbnail.fullImageWidth || displayWidth,
-            height: thumbnail.fullImageHeight || displayHeight,
-            objectFit: 'none',
-            objectPosition: `-${thumbnail.x}px -${thumbnail.y}px`,
-            background: '#222',
-            borderRadius: '8px',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+            width: `${displayWidth}px`,
+            height: `${displayHeight}px`,
+            overflow: 'hidden',
+            position: 'relative',
+            borderRadius: '2px',
           }}
-        />
-      )}
-      {loaded && !error && (
-        <span className="text-xs mt-1 text-gray-400 bg-black/70 px-2 rounded">
-          {Math.floor(previewTime! / 60)}:{((previewTime! % 60) | 0).toString().padStart(2, '0')}
-        </span>
+        >
+          <img
+            src={thumbnail.url}
+            alt="썸네일 미리보기"
+            style={{
+              position: 'absolute',
+              left: `-${thumbnail.x}px`,
+              top: `-${thumbnail.y}px`,
+              maxWidth: 'none',
+              maxHeight: 'none',
+              width: 'auto',
+              height: 'auto',
+              background: '#222',
+            }}
+          />
+        </div>
       )}
     </div>
   );
