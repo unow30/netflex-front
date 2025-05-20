@@ -41,7 +41,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const [previewTime, setPreviewTime] = useState<number | null>(null);
   const [previewLeft, setPreviewLeft] = useState(0);
   const [progressBarRect, setProgressBarRect] = useState<DOMRect>({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => { } });
-
+  // 비디오가 실제로 재생을 시작했는지 추적
+  const [videoStarted, setVideoStarted] = useState(false);
   // 사용자가 명시적으로 일시정지했는지 여부를 추적
   const userPausedRef = useRef<boolean>(false);
   
@@ -242,6 +243,52 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     };
   }, [videoRef, initialTime, onTimeUpdate, onMutedChange]);
 
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    const video = videoRef.current;
+
+    // 로딩 완료 시 이벤트
+    const handleLoadedData = () => {
+      if (video.readyState >= 2) {
+        setDuration(video.duration);
+      }
+    };
+
+    // 페이지 새로고침 시 처리
+    const handlePageVisibility = () => {
+      if (!video.paused && document.visibilityState === 'hidden') {
+        // 페이지가 백그라운드로 가면 비디오 상태 저장
+        userPausedRef.current = true;
+      }
+    };
+
+    // 재생 시작 이벤트
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setVideoStarted(true);
+    };
+
+    // 일시정지 이벤트
+    const handlePause = () => {
+      setIsPlaying(false);
+    };
+
+    // 비디오 이벤트 리스너 등록
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    document.addEventListener('visibilitychange', handlePageVisibility);
+
+    // 이벤트 해제
+    return () => {
+      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      document.removeEventListener('visibilitychange', handlePageVisibility);
+    };
+  }, [videoRef.current]);
+
   // 프로그레스바 클릭 시 탐색
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const bar = progressBarRef.current;
@@ -381,6 +428,15 @@ export const HLSVideoPlayer: React.FC<Props> = ({
 
       {/* 비디오 요소 */}
       <div className="relative flex justify-center items-center">
+        {/* 썸네일 이미지 (비디오 재생 전) */}
+        {poster && !videoStarted && (
+          <div 
+            className="absolute inset-0 z-5 bg-center bg-cover cursor-pointer"
+            style={{ backgroundImage: `url('${poster}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+            onClick={(e) => handlePlayPause(e)}
+          />
+        )}
+        
         <video
           ref={videoRef}
           preload="auto"
@@ -389,6 +445,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           playsInline
           poster={poster}
           data-has-interacted={hasInteracted ? 'true' : 'false'}
+          data-video-started={videoStarted ? 'true' : 'false'}
         >
           {videoUrl && <source src={videoUrl} type="application/x-mpegURL" />}
           브라우저가 비디오를 지원하지 않습니다.

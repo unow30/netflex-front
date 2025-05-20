@@ -3,7 +3,7 @@ import {useParams, Link} from 'react-router-dom';
 import {Layout} from '../components/layout/layout';
 import {MovieDto} from '../types';
 import {extractErrorMessage} from '../utils/errorMessage';
-import { getMediaConvertJobId } from '../utils/thumbnailUtils';
+import { getMediaConvertJobId, getFirstThumbnailFromHls } from '../utils/thumbnailUtils';
 
 const getFallbackMovieUrl = (id?: string) => {
     if (!id) return '';
@@ -175,8 +175,8 @@ export const MovieDetailPage = () => {
                     <Suspense fallback={<div className="aspect-video bg-gray-800 flex items-center justify-center text-white">로딩중...</div>}>
                         <HLSVideoPlayer
                             videoUrl={movie?.movieFileName || getFallbackMovieUrl(id)}
-                            autoPlay={true}
-                            poster={movie?.movieFileName}
+                            autoPlay={false}
+                            poster={movie?.movieFileName ? getFirstThumbnailFromHls(movie.movieFileName) : ''}
                             muted={initialMuted}
                             initialTime={initialPlaybackTime}
                             onTimeUpdate={handleTimeUpdate}
