@@ -409,42 +409,34 @@ export const HLSVideoPlayer: React.FC<Props> = ({
             className="absolute bg-black border border-gray-700 shadow-lg z-20"
             style={{
               left: `${Math.min(Math.max(0, previewLeft - 80), progressBarRect.width - 160)}px`,
-              bottom: `${progressBarRef.current ? progressBarRef.current.clientHeight + 40 : 60}px`,
+              bottom: `${progressBarRef.current ? progressBarRef.current.clientHeight + 50 : 70}px`,
               transform: "translateX(0)",
             }}
           >
-            {getThumbnailAt && (
-              <div className="w-40 h-24 relative overflow-hidden bg-black/80">
-                {previewTime !== null && getThumbnailAt(previewTime) && (
-                  <div 
-                    className="absolute"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {getThumbnailAt(previewTime) && (
-                      <img
-                        src={getThumbnailAt(previewTime)?.url || ''}
-                        alt="썸네일 미리보기"
-                        style={{
-                          position: 'absolute',
-                          left: `-${getThumbnailAt(previewTime)?.x || 0}px`,
-                          top: `-${getThumbnailAt(previewTime)?.y || 0}px`,
-                          maxWidth: 'none',
-                          maxHeight: 'none',
-                          width: 'auto',
-                          height: 'auto',
-                          background: '#222',
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
+            {getThumbnailAt && true && getThumbnailAt(previewTime) && (
+              <div 
+                className="relative overflow-hidden bg-black/80"
+                style={{
+                  width: `${getThumbnailAt(previewTime)?.width || 160}px`,
+                  height: `${getThumbnailAt(previewTime)?.height || 90}px`,
+                }}
+              >
+                <img
+                  src={getThumbnailAt(previewTime)?.url || ''}
+                  alt="썸네일 미리보기"
+                  style={{
+                    position: 'absolute',
+                    left: `-${getThumbnailAt(previewTime)?.x || 0}px`,
+                    top: `-${getThumbnailAt(previewTime)?.y || 0}px`,
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    width: 'auto',
+                    height: 'auto',
+                    background: '#222',
+                  }}
+                />
               </div>
             )}
-            <div className="p-1 text-xs text-center">{formatTime(previewTime)}</div>
           </div>
         )}
 
