@@ -143,13 +143,6 @@ export const useHLSPlayer = (src: string, autoPlay = false, hasInteracted = fals
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
           // 네이티브 HLS 지원 (Safari 등)
           video.src = src;
-          if (autoPlay) {
-            try {
-              await video.play();
-            } catch (err) {
-              console.log('자동 재생 실패:', err);
-            }
-          }
           setLoading(false);
           
           // 썸네일 VTT 파일 로드 시도
@@ -181,13 +174,6 @@ export const useHLSPlayer = (src: string, autoPlay = false, hasInteracted = fals
 
               hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 setLoading(false);
-                if (autoPlay) {
-                  try {
-                    video.play();
-                  } catch (err) {
-                    console.log('자동 재생 실패:', err);
-                  }
-                }
                 
                 // 썸네일 VTT 파일 로드 시도
                 try {
@@ -259,7 +245,7 @@ export const useHLSPlayer = (src: string, autoPlay = false, hasInteracted = fals
         hlsRef.current = null;
       }
     };
-  }, [src, autoPlay]);
+  }, [src]);
 
   return { videoRef, loading, error, getThumbnailAt, thumbnailsLoaded };
 };
