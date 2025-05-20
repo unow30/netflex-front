@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useHLSPlayer} from '../../hooks/useHLSPlayer';
 import {ProgressBar} from './ProgressBar';
-import {ControlRow} from './ControlRow';
+import ControlRow from './ControlRow'; // named export에서 default export로 변경
 
 interface Props {
   videoUrl: string;
@@ -39,8 +39,9 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   // 사용자가 명시적으로 일시정지했는지 여부를 추적
   const userPausedRef = useRef<boolean>(false);
   
-  const progressBarRef = useRef<HTMLDivElement | null>(null);
-  const videoContainerRef = useRef<HTMLDivElement | null>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const volumeControlRef = useRef<HTMLDivElement>(null);
   const initialTimeApplied = useRef<boolean>(false);
 
   // 썸네일 프리뷰용 progressBar 위치와 width 계산
@@ -110,32 +111,33 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           // 세션 스토리지 값 기준으로 음소거 상태 설정
           const shouldMute = userPreferredMutedState === 'muted';
           
-          if (shouldMute !== videoRef.current.muted) {
+          if (videoRef.current && shouldMute !== videoRef.current.muted) {
             videoRef.current.muted = shouldMute;
             setIsMuted(shouldMute);
             if (onMutedChange) onMutedChange(shouldMute);
           }
           
           // 자동 재생 시도
-          if (videoRef.current.paused) {
+          if (videoRef.current && videoRef.current.paused) {
             console.log('비디오가 일시정지 상태이므로 재생 시도');
             await videoRef.current.play();
             console.log('자동 재생 성공');
           }
         } catch (error) {
           console.warn('자동 재생 실패:', error);
-          // 음소거 상태로 다시 시도 (사용자 상호작용이 없는 경우에만)
+          // 음소거 상태로 재생 시도
           if (videoRef.current && !videoRef.current.muted) {
             videoRef.current.muted = true;
             setIsMuted(true);
             sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
             
-            try {
-              await videoRef.current.play();
-              console.log('음소거 상태로 자동 재생 성공');
-            } catch (innerError) {
-              console.error('음소거 상태에서도 자동 재생 실패:', innerError);
-            }
+            videoRef.current.play()
+              .then(() => {
+                console.log('음소거 상태로 재생 성공');
+              })
+              .catch(innerError => {
+                console.error('음소거 상태에서도 재생 실패:', innerError);
+              });
           }
         }
       }
@@ -211,13 +213,14 @@ export const HLSVideoPlayer: React.FC<Props> = ({
             video.muted = true;
             setIsMuted(true);
             sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
-            if (onMutedChange) onMutedChange(true);
             
             video.play()
               .then(() => {
                 console.log('음소거 상태로 재생 성공');
               })
-              .catch(e => console.error('음소거 상태에서도 재생 실패:', e));
+              .catch(innerError => {
+                console.error('음소거 상태에서도 재생 실패:', innerError);
+              });
           });
       } catch (error) {
         console.error('재생 시도 중 오류:', error);
@@ -325,7 +328,23 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value);
     setVolume(v);
-    if (videoRef.current) videoRef.current.volume = v;
+    const video = videoRef.current;
+    if (!video) return;
+    
+    video.volume = v;
+    
+    // 볼륨 값이 0이면 음소거 활성화, 0이 아니면 음소거 해제
+    if (v === 0 && !isMuted) {
+      video.muted = true;
+      setIsMuted(true);
+      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
+      if (onMutedChange) onMutedChange(true);
+    } else if (v > 0 && isMuted) {
+      video.muted = false;
+      setIsMuted(false);
+      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'unmuted');
+      if (onMutedChange) onMutedChange(false);
+    }
   };
   
   // 음소거 토글
@@ -345,12 +364,29 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     }
   };
   
+  // 볼륨 컨트롤 표시/숨김 처리
+  const handleVolumeEnter = () => {
+    setShowVolume(true);
+  };
+  
+  const handleVolumeLeave = () => {
+    // 볼륨 컨트롤 영역 밖으로 나갔을 때만 숨김
+    setShowVolume(false);
+  };
+  
+  // 마우스가 문서 클릭 시 볼륨 컨트롤 숨김
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = volume;
-      videoRef.current.muted = isMuted;
-    }
-  }, [volume, isMuted, videoRef]);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(e.target as Node)) {
+        setShowVolume(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // 전체화면 토글
   const handleFullscreen = () => {
@@ -495,10 +531,11 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           onPlayPause={handlePlayPause}
           onMute={toggleMute}
           onVolumeChange={handleVolumeChange}
-          onVolumeEnter={() => setShowVolume(true)}
-          onVolumeLeave={() => setShowVolume(false)}
+          onVolumeEnter={handleVolumeEnter}
+          onVolumeLeave={handleVolumeLeave}
           onFullscreen={handleFullscreen}
           onTheaterMode={() => setTheaterMode(!theaterMode)}
+          volumeControlRef={volumeControlRef as React.RefObject<HTMLDivElement>}
         />
       </div>
     </div>

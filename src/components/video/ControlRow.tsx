@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface ControlRowProps {
   isPlaying: boolean;
@@ -16,9 +16,10 @@ interface ControlRowProps {
   onVolumeLeave: () => void;
   onFullscreen: () => void;
   onTheaterMode: () => void;
+  volumeControlRef?: React.RefObject<HTMLDivElement>;
 }
 
-export const ControlRow: React.FC<ControlRowProps> = ({
+const ControlRow: React.FC<ControlRowProps> = ({
   isPlaying,
   isMuted,
   volume,
@@ -33,12 +34,32 @@ export const ControlRow: React.FC<ControlRowProps> = ({
   onVolumeEnter,
   onVolumeLeave,
   onFullscreen,
-  onTheaterMode
+  onTheaterMode,
+  volumeControlRef,
 }) => {
   const [hovered, setHovered] = useState<string | null>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [isVolumeVisible, setIsVolumeVisible] = useState(false);
+
+  // 볼륨 조절바 표시 상태 관리 
+  const handleMouseEnterControls = () => {
+    setIsVolumeVisible(true);
+    onVolumeEnter(); // 기존 콜백도 호출 
+  };
+
+  const handleMouseLeaveControls = () => {
+    setIsVolumeVisible(false);
+    onVolumeLeave(); // 기존 콜백도 호출
+  };
 
   return (
-    <div className="controls-row flex flex-wrap items-center gap-3 text-yellow-300 z-35 bg-black rounded p-2 w-full min-w-0 mx-auto relative box-border" style={{ margin: 0 }}>
+    <div 
+      className="controls-row flex flex-wrap items-center gap-3 text-yellow-300 z-35 bg-black rounded p-2 w-full min-w-0 mx-auto relative box-border" 
+      style={{ margin: 0 }}
+      ref={controlsRef}
+      onMouseEnter={handleMouseEnterControls}
+      onMouseLeave={handleMouseLeaveControls}
+    >
       <div className="relative">
         <button
           onClick={onPlayPause}
@@ -54,39 +75,39 @@ export const ControlRow: React.FC<ControlRowProps> = ({
           </span>
         )}
       </div>
-      <div className="relative">
+      {/* 유튜브 스타일 볼륨 컨트롤 */}
+      <div
+        className="relative flex items-center group"
+        style={{ width: '32px', height: '32px' }}
+        ref={volumeControlRef}
+      >
         <button
           onClick={onMute}
-          className="volume-btn text-2xl ml-2"
-          onMouseEnter={() => {
-            setHovered('volume');
-            onVolumeEnter();
-          }}
-          onMouseLeave={() => {
-            setHovered(null);
-            onVolumeLeave();
-          }}
+          className="volume-btn text-2xl flex items-center justify-center w-8 h-8"
+          style={{ outline: 'none', background: 'transparent', border: 'none', padding: 0 }}
         >
           {isMuted || volume === 0 ? '🔇' : '🔊'}
         </button>
-        {hovered === 'volume' && (
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/80 text-xs text-white z-50 pointer-events-none whitespace-nowrap">
-            {isMuted ? '음소거 해제' : '음소거'}
-          </span>
+        {/* 사운드바: 컨트롤 영역(빨간 박스)에 마우스가 있을 때 표시 */}
+        {(isVolumeVisible || showVolume) && (
+          <div
+            className="absolute left-9 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 bg-black/80 rounded z-40"
+            style={{ minWidth: '96px', width: '96px', height: '32px' }}
+          >
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={onVolumeChange}
+              className="volume-slider"
+              style={{ width: '88px', accentColor: '#fff' }}
+              title="볼륨"
+            />
+          </div>
         )}
       </div>
-      {showVolume && (
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={volume}
-          onChange={onVolumeChange}
-          className="volume-slider ml-2"
-          title="볼륨"
-        />
-      )}
       <span className="ml-2 text-sm">
         {formatTime(currentTime)}
       </span>
@@ -124,3 +145,5 @@ export const ControlRow: React.FC<ControlRowProps> = ({
     </div>
   );
 };
+
+export default ControlRow;
