@@ -149,7 +149,7 @@ export const useHLSPlayer = (src: string, autoPlay = false, hasInteracted = fals
           try {
             const baseUrl = src.substring(0, src.lastIndexOf('/') + 1);
             const vttUrl = `${baseUrl}origin_segment_Thumbnail_I-Frame.vtt`;
-            parseVttForThumbnails(vttUrl);
+            await parseVttForThumbnails(vttUrl);
           } catch (err) {
             console.error('썸네일 로드 실패:', err);
           }

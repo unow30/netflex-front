@@ -422,14 +422,25 @@ export const HLSVideoPlayer: React.FC<Props> = ({
                       width: '100%',
                       height: '100%',
                       overflow: 'hidden',
-                      backgroundImage: `url('${getThumbnailAt(previewTime)?.url || ''}')`,
-                      backgroundPositionX: `-${getThumbnailAt(previewTime)?.x || 0}px`,
-                      backgroundPositionY: `-${getThumbnailAt(previewTime)?.y || 0}px`,
-                      backgroundRepeat: 'no-repeat',
-                      transform: `scale(${160 / (getThumbnailAt(previewTime)?.width || 160)})`,
-                      transformOrigin: 'top left'
                     }}
-                  />
+                  >
+                    {getThumbnailAt(previewTime) && (
+                      <img
+                        src={getThumbnailAt(previewTime)?.url || ''}
+                        alt="썸네일 미리보기"
+                        style={{
+                          position: 'absolute',
+                          left: `-${getThumbnailAt(previewTime)?.x || 0}px`,
+                          top: `-${getThumbnailAt(previewTime)?.y || 0}px`,
+                          maxWidth: 'none',
+                          maxHeight: 'none',
+                          width: 'auto',
+                          height: 'auto',
+                          background: '#222',
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             )}
