@@ -108,7 +108,10 @@ const ControlRow: React.FC<ControlRowProps> = ({
           </div>
         )}
       </div>
-      <span className="ml-2 text-sm">
+      {/* 재생시간 - 볼륨 조절바 표시 여부에 따라 위치 조정 */}
+      <span 
+        className={`text-sm transition-all duration-200 ease-in-out ${(isVolumeVisible || showVolume) ? 'ml-28' : 'ml-2'}`}
+      >
         {formatTime(currentTime)}
       </span>
       <div className="flex-1" />

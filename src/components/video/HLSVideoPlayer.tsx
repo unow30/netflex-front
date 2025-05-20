@@ -17,6 +17,7 @@ interface Props {
 
 // 세션 스토리지 키 상수
 const SESSION_USER_PREFERRED_MUTED_STATE = 'user_preferred_muted_state';
+const SESSION_USER_HAS_INTERACTED = 'user_has_interacted';
 
 export const HLSVideoPlayer: React.FC<Props> = ({
   videoUrl, autoPlay, poster, className = '', muted = false,
@@ -57,41 +58,22 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     return () => window.removeEventListener('resize', updateRect);
   }, []);
 
-  // 컴포넌트 마운트 시 세션 스토리지에서 사용자 선호 음소거 상태 불러오기
+  // 비디오 로드 시 초기화
   useEffect(() => {
-    const userPreferredMutedState = sessionStorage.getItem(SESSION_USER_PREFERRED_MUTED_STATE);
-    // 세션 스토리지에 값이 있으면 그 값을 우선 적용
-    if (userPreferredMutedState) {
-      const shouldBeMuted = userPreferredMutedState === 'muted';
-      setIsMuted(shouldBeMuted);
-      
-      if (videoRef.current) {
-        videoRef.current.muted = shouldBeMuted;
-      }
-      
-      // 부모 컴포넌트의 상태도 동기화
-      if (onMutedChange && muted !== shouldBeMuted) {
-        onMutedChange(shouldBeMuted);
-      }
-    } else {
-      // 세션 스토리지에 값이 없으면 props로 전달된 muted 값을 적용
-      setIsMuted(muted);
-      if (videoRef.current) {
-        videoRef.current.muted = muted;
-      }
-      // 초기값 세션 스토리지에 저장
-      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, muted ? 'muted' : 'unmuted');
+    if (!videoRef.current || !videoUrl) return;
+
+    // 세션 스토리지에서 사용자 음소거 설정 불러오기
+    const userPreferredMutedState = sessionStorage.getItem(SESSION_USER_PREFERRED_MUTED_STATE) || 'unmuted';
+    
+    // 초기 음소거 상태 설정
+    if (videoRef.current) {
+      videoRef.current.muted = userPreferredMutedState === 'muted';
+      setIsMuted(userPreferredMutedState === 'muted');
     }
     
-    // 초기 상태에서는 사용자가 일시정지하지 않은 것으로 설정
-    userPausedRef.current = false;
-  }, []);
-
-  // 사용자 상호작용 상태에 따른 자동 재생 처리
-  useEffect(() => {
     // 사용자 상호작용 상태 기록
     if (hasInteracted) {
-      sessionStorage.setItem('user_has_interacted', 'true');
+      sessionStorage.setItem(SESSION_USER_HAS_INTERACTED, 'true');
     }
 
     const tryAutoplay = async () => {
@@ -99,12 +81,12 @@ export const HLSVideoPlayer: React.FC<Props> = ({
       
       // 사용자가 명시적으로 일시정지했다면 자동 재생 시도하지 않음
       if (userPausedRef.current) {
-        console.log('사용자가 명시적으로 일시정지했으므로 자동 재생 시도하지 않음');
+        // console.log('사용자가 명시적으로 일시정지했으므로 자동 재생 시도하지 않음');
         return;
       }
 
       if (hasInteracted || autoPlay) {
-        console.log('자동 재생 시도 - 사용자 상호작용:', hasInteracted, '자동재생:', autoPlay);
+        // console.log('자동 재생 시도 - 사용자 상호작용:', hasInteracted, '자동재생:', autoPlay);
         try {
           // 사용자 음소거 설정 확인 (세션 스토리지)
           const userPreferredMutedState = sessionStorage.getItem(SESSION_USER_PREFERRED_MUTED_STATE);
@@ -119,12 +101,12 @@ export const HLSVideoPlayer: React.FC<Props> = ({
           
           // 자동 재생 시도
           if (videoRef.current && videoRef.current.paused) {
-            console.log('비디오가 일시정지 상태이므로 재생 시도');
+            // console.log('비디오가 일시정지 상태이므로 재생 시도');
             await videoRef.current.play();
-            console.log('자동 재생 성공');
+            // console.log('자동 재생 성공');
           }
         } catch (error) {
-          console.warn('자동 재생 실패:', error);
+          // console.warn('자동 재생 실패:', error);
           // 음소거 상태로 재생 시도
           if (videoRef.current && !videoRef.current.muted) {
             videoRef.current.muted = true;
@@ -133,10 +115,10 @@ export const HLSVideoPlayer: React.FC<Props> = ({
             
             videoRef.current.play()
               .then(() => {
-                console.log('음소거 상태로 재생 성공');
+                // console.log('음소거 상태로 재생 성공');
               })
               .catch(innerError => {
-                console.error('음소거 상태에서도 재생 실패:', innerError);
+                // console.error('음소거 상태에서도 재생 실패:', innerError);
               });
           }
         }
@@ -149,7 +131,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     return () => {
       clearTimeout(autoplayTimeout);
     };
-  }, [hasInteracted, autoPlay, onMutedChange]);
+  }, [hasInteracted, autoPlay, onMutedChange, videoUrl]);
 
   // 초기 재생 시간 설정
   useEffect(() => {
@@ -167,7 +149,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   };
 
   // 재생/일시정지
-  const handlePlayPause = (e?: React.MouseEvent | React.KeyboardEvent) => {
+  const handlePlayPause = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     // 이벤트 버블링 방지
     if (e) {
       e.stopPropagation();
@@ -177,38 +159,38 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     const video = videoRef.current;
     if (!video) return;
     
-    console.log('재생/일시정지 버튼 클릭됨', video.paused, isPlaying);
+    // console.log('재생/일시정지 버튼 클릭됨', video.paused, isPlaying);
     
     // 사용자가 상호작용했다고 표시
-    sessionStorage.setItem('user_has_interacted', 'true');
+    sessionStorage.setItem(SESSION_USER_HAS_INTERACTED, 'true');
     
     // 현재 상태 기준으로 토글
     if (isPlaying) {
       // 현재 재생 중이면 일시정지
       try {
-        console.log('일시정지 시도 중...');
+        // console.log('일시정지 시도 중...');
         video.pause();
         // 사용자가 명시적으로 일시정지했음을 표시
         userPausedRef.current = true;
-        console.log('일시정지 완료, 상태:', video.paused, '사용자 일시정지:', userPausedRef.current);
+        // console.log('일시정지 완료, 상태:', video.paused, '사용자 일시정지:', userPausedRef.current);
       } catch (error) {
-        console.error('일시정지 중 오류:', error);
+        // console.error('일시정지 중 오류:', error);
       }
     } else {
       // 현재 일시정지 상태면 재생
       if (video.ended) video.currentTime = 0;
       
       try {
-        console.log('재생 시도 중...');
+        // console.log('재생 시도 중...');
         // 사용자가 명시적으로 재생을 시작함
         userPausedRef.current = false;
         // 재생 시도
-        video.play()
+        await video.play()
           .then(() => {
-            console.log('재생 성공, 사용자 일시정지:', userPausedRef.current);
+            // console.log('재생 성공, 사용자 일시정지:', userPausedRef.current);
           })
           .catch(error => {
-            console.error('재생 에러:', error);
+            // console.error('재생 에러:', error);
             // 음소거 상태로 재생 시도
             video.muted = true;
             setIsMuted(true);
@@ -216,14 +198,14 @@ export const HLSVideoPlayer: React.FC<Props> = ({
             
             video.play()
               .then(() => {
-                console.log('음소거 상태로 재생 성공');
+                // console.log('음소거 상태로 재생 성공');
               })
               .catch(innerError => {
-                console.error('음소거 상태에서도 재생 실패:', innerError);
+                // console.error('음소거 상태에서도 재생 실패:', innerError);
               });
           });
       } catch (error) {
-        console.error('재생 시도 중 오류:', error);
+        // console.error('재생 시도 중 오류:', error);
       }
     }
   };
@@ -237,12 +219,12 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     setIsPlaying(!video.paused);
     
     const onPlay = () => {
-      console.log('onPlay 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
+      // console.log('onPlay 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
       setIsPlaying(true);
     };
     
     const onPause = () => {
-      console.log('onPause 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
+      // console.log('onPause 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
       setIsPlaying(false);
     };
     
@@ -334,29 +316,31 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     video.volume = v;
     
     // 볼륨 값이 0이면 음소거 활성화, 0이 아니면 음소거 해제
-    if (v === 0 && !isMuted) {
-      video.muted = true;
-      setIsMuted(true);
-      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
-      if (onMutedChange) onMutedChange(true);
-    } else if (v > 0 && isMuted) {
-      video.muted = false;
-      setIsMuted(false);
-      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'unmuted');
-      if (onMutedChange) onMutedChange(false);
+    const newMutedState = v === 0;
+    
+    // 음소거 상태가 변경되었을 때만 업데이트
+    if (newMutedState !== isMuted) {
+      video.muted = newMutedState;
+      setIsMuted(newMutedState);
+      
+      // 세션 스토리지에 사용자 음소거 설정 저장
+      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, newMutedState ? 'muted' : 'unmuted');
+      
+      if (onMutedChange) {
+        onMutedChange(newMutedState);
+      }
     }
   };
   
   // 음소거 토글
   const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (!videoRef.current) return;
     
-    const newMutedState = !video.muted;
-    video.muted = newMutedState;
+    const newMutedState = !isMuted;
+    videoRef.current.muted = newMutedState;
     setIsMuted(newMutedState);
     
-    // 음소거 상태 변경 시 세션 스토리지 업데이트
+    // 세션 스토리지에 사용자 음소거 설정 저장
     sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, newMutedState ? 'muted' : 'unmuted');
     
     if (onMutedChange) {
