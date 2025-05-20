@@ -15,6 +15,9 @@ interface Props {
   onMutedChange?: (isMuted: boolean) => void; // 음소거 상태 변경 콜백
 }
 
+// 세션 스토리지 키 상수
+const SESSION_USER_PREFERRED_MUTED_STATE = 'user_preferred_muted_state';
+
 export const HLSVideoPlayer: React.FC<Props> = ({
   videoUrl, autoPlay, poster, className = '', muted = false,
   initialTime = 0, hasInteracted = false, onTimeUpdate, onMutedChange
@@ -24,24 +27,28 @@ export const HLSVideoPlayer: React.FC<Props> = ({
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [duration, setDuration] = useState(0);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [previewTime, setPreviewTime] = useState<number | null>(null);
-  const [previewLeft, setPreviewLeft] = useState<number>(0);
+  const [isMuted, setIsMuted] = useState(muted);
   const [volume, setVolume] = useState(1);
   const [showVolume, setShowVolume] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
-  const [isMuted, setIsMuted] = useState(muted);
-  const initialTimeApplied = useRef(false);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const [previewTime, setPreviewTime] = useState<number | null>(null);
+  const [previewLeft, setPreviewLeft] = useState(0);
+  const [progressBarRect, setProgressBarRect] = useState<DOMRect>({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => { } });
+
+  // 사용자가 명시적으로 일시정지했는지 여부를 추적
+  const userPausedRef = useRef<boolean>(false);
+  
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+  const videoContainerRef = useRef<HTMLDivElement | null>(null);
+  const initialTimeApplied = useRef<boolean>(false);
 
   // 썸네일 프리뷰용 progressBar 위치와 width 계산
-  const [progressBarRect, setProgressBarRect] = useState<{left: number, width: number}>({left: 0, width: 0});
   useEffect(() => {
     const updateRect = () => {
       if (progressBarRef.current) {
         const rect = progressBarRef.current.getBoundingClientRect();
-        setProgressBarRect({ left: rect.left, width: rect.width });
+        setProgressBarRect(rect);
       }
     };
     updateRect();
@@ -49,13 +56,98 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     return () => window.removeEventListener('resize', updateRect);
   }, []);
 
-  // 초기 muted 상태 설정
+  // 컴포넌트 마운트 시 세션 스토리지에서 사용자 선호 음소거 상태 불러오기
   useEffect(() => {
-    setIsMuted(muted);
-    if (videoRef.current) {
-      videoRef.current.muted = muted;
+    const userPreferredMutedState = sessionStorage.getItem(SESSION_USER_PREFERRED_MUTED_STATE);
+    // 세션 스토리지에 값이 있으면 그 값을 우선 적용
+    if (userPreferredMutedState) {
+      const shouldBeMuted = userPreferredMutedState === 'muted';
+      setIsMuted(shouldBeMuted);
+      
+      if (videoRef.current) {
+        videoRef.current.muted = shouldBeMuted;
+      }
+      
+      // 부모 컴포넌트의 상태도 동기화
+      if (onMutedChange && muted !== shouldBeMuted) {
+        onMutedChange(shouldBeMuted);
+      }
+    } else {
+      // 세션 스토리지에 값이 없으면 props로 전달된 muted 값을 적용
+      setIsMuted(muted);
+      if (videoRef.current) {
+        videoRef.current.muted = muted;
+      }
+      // 초기값 세션 스토리지에 저장
+      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, muted ? 'muted' : 'unmuted');
     }
-  }, [muted]);
+    
+    // 초기 상태에서는 사용자가 일시정지하지 않은 것으로 설정
+    userPausedRef.current = false;
+  }, []);
+
+  // 사용자 상호작용 상태에 따른 자동 재생 처리
+  useEffect(() => {
+    // 사용자 상호작용 상태 기록
+    if (hasInteracted) {
+      sessionStorage.setItem('user_has_interacted', 'true');
+    }
+
+    const tryAutoplay = async () => {
+      if (!videoRef.current) return;
+      
+      // 사용자가 명시적으로 일시정지했다면 자동 재생 시도하지 않음
+      if (userPausedRef.current) {
+        console.log('사용자가 명시적으로 일시정지했으므로 자동 재생 시도하지 않음');
+        return;
+      }
+
+      if (hasInteracted || autoPlay) {
+        console.log('자동 재생 시도 - 사용자 상호작용:', hasInteracted, '자동재생:', autoPlay);
+        try {
+          // 사용자 음소거 설정 확인 (세션 스토리지)
+          const userPreferredMutedState = sessionStorage.getItem(SESSION_USER_PREFERRED_MUTED_STATE);
+          // 세션 스토리지 값 기준으로 음소거 상태 설정
+          const shouldMute = userPreferredMutedState === 'muted';
+          
+          if (shouldMute !== videoRef.current.muted) {
+            videoRef.current.muted = shouldMute;
+            setIsMuted(shouldMute);
+            if (onMutedChange) onMutedChange(shouldMute);
+          }
+          
+          // 자동 재생 시도
+          if (videoRef.current.paused) {
+            console.log('비디오가 일시정지 상태이므로 재생 시도');
+            await videoRef.current.play();
+            console.log('자동 재생 성공');
+          }
+        } catch (error) {
+          console.warn('자동 재생 실패:', error);
+          // 음소거 상태로 다시 시도 (사용자 상호작용이 없는 경우에만)
+          if (videoRef.current && !videoRef.current.muted) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
+            
+            try {
+              await videoRef.current.play();
+              console.log('음소거 상태로 자동 재생 성공');
+            } catch (innerError) {
+              console.error('음소거 상태에서도 자동 재생 실패:', innerError);
+            }
+          }
+        }
+      }
+    };
+    
+    // 비디오 요소가 준비되었을 때 자동 재생 시도
+    const autoplayTimeout = setTimeout(tryAutoplay, 100);
+    
+    return () => {
+      clearTimeout(autoplayTimeout);
+    };
+  }, [hasInteracted, autoPlay, onMutedChange]);
 
   // 초기 재생 시간 설정
   useEffect(() => {
@@ -65,32 +157,6 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     }
   }, [initialTime, videoRef.current]);
 
-  // 사용자 상호작용 상태에 따른 자동 재생 처리
-  useEffect(() => {
-    const tryAutoplay = async () => {
-      if (videoRef.current && hasInteracted) {
-        try {
-          // 자동 재생 시도
-          await videoRef.current.play();
-        } catch (error) {
-          console.warn('자동 재생 실패:', error);
-          // 음소거 상태로 다시 시도
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            setIsMuted(true);
-            try {
-              await videoRef.current.play();
-            } catch (innerError) {
-              console.error('음소거 상태에서도 자동 재생 실패:', innerError);
-            }
-          }
-        }
-      }
-    };
-    
-    tryAutoplay();
-  }, [hasInteracted, videoRef.current]);
-
   // 시간 포맷
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -98,16 +164,84 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  // 재생/일시정지
+  const handlePlayPause = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    // 이벤트 버블링 방지
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    
+    const video = videoRef.current;
+    if (!video) return;
+    
+    console.log('재생/일시정지 버튼 클릭됨', video.paused, isPlaying);
+    
+    // 사용자가 상호작용했다고 표시
+    sessionStorage.setItem('user_has_interacted', 'true');
+    
+    // 현재 상태 기준으로 토글
+    if (isPlaying) {
+      // 현재 재생 중이면 일시정지
+      try {
+        console.log('일시정지 시도 중...');
+        video.pause();
+        // 사용자가 명시적으로 일시정지했음을 표시
+        userPausedRef.current = true;
+        console.log('일시정지 완료, 상태:', video.paused, '사용자 일시정지:', userPausedRef.current);
+      } catch (error) {
+        console.error('일시정지 중 오류:', error);
+      }
+    } else {
+      // 현재 일시정지 상태면 재생
+      if (video.ended) video.currentTime = 0;
+      
+      try {
+        console.log('재생 시도 중...');
+        // 사용자가 명시적으로 재생을 시작함
+        userPausedRef.current = false;
+        // 재생 시도
+        video.play()
+          .then(() => {
+            console.log('재생 성공, 사용자 일시정지:', userPausedRef.current);
+          })
+          .catch(error => {
+            console.error('재생 에러:', error);
+            // 음소거 상태로 재생 시도
+            video.muted = true;
+            setIsMuted(true);
+            sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, 'muted');
+            if (onMutedChange) onMutedChange(true);
+            
+            video.play()
+              .then(() => {
+                console.log('음소거 상태로 재생 성공');
+              })
+              .catch(e => console.error('음소거 상태에서도 재생 실패:', e));
+          });
+      } catch (error) {
+        console.error('재생 시도 중 오류:', error);
+      }
+    }
+  };
+
   // 비디오 이벤트 핸들러
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     
+    // 초기 상태 설정
+    setIsPlaying(!video.paused);
+    
     const onPlay = () => {
+      console.log('onPlay 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
       setIsPlaying(true);
     };
     
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      console.log('onPause 이벤트 발생, 사용자 일시정지:', userPausedRef.current);
+      setIsPlaying(false);
+    };
     
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
@@ -129,12 +263,23 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     };
     
     const onVolumeChange = () => {
+      // 비디오 요소의 음소거 상태를 상태와 세션 스토리지에 동기화
+      setIsMuted(video.muted);
+      sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, video.muted ? 'muted' : 'unmuted');
+      
       if (onMutedChange) {
         onMutedChange(video.muted);
       }
-      setIsMuted(video.muted);
     };
     
+    // 이벤트 핸들러 등록 전 기존 핸들러 제거
+    video.removeEventListener('play', onPlay);
+    video.removeEventListener('pause', onPause);
+    video.removeEventListener('timeupdate', handleTimeUpdate);
+    video.removeEventListener('loadedmetadata', onLoadedMetadata);
+    video.removeEventListener('volumechange', onVolumeChange);
+    
+    // 이벤트 핸들러 등록
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -149,31 +294,6 @@ export const HLSVideoPlayer: React.FC<Props> = ({
       video.removeEventListener('volumechange', onVolumeChange);
     };
   }, [videoRef, initialTime, onTimeUpdate, onMutedChange]);
-
-  // 재생/일시정지
-  const handlePlayPause = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused || video.ended) {
-      if (video.ended) video.currentTime = 0;
-      
-      // 사용자 상호작용을 통해 재생을 시도하는 경우
-      const playPromise = video.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('재생 에러:', error);
-          // 음소거 상태로 재생 시도
-          video.muted = true;
-          setIsMuted(true);
-          if (onMutedChange) onMutedChange(true);
-          video.play().catch(e => console.error('음소거 상태에서도 재생 실패:', e));
-        });
-      }
-    } else {
-      video.pause();
-    }
-  };
 
   // 프로그레스바 클릭 시 탐색
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -213,11 +333,15 @@ export const HLSVideoPlayer: React.FC<Props> = ({
     const video = videoRef.current;
     if (!video) return;
     
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
+    const newMutedState = !video.muted;
+    video.muted = newMutedState;
+    setIsMuted(newMutedState);
+    
+    // 음소거 상태 변경 시 세션 스토리지 업데이트
+    sessionStorage.setItem(SESSION_USER_PREFERRED_MUTED_STATE, newMutedState ? 'muted' : 'unmuted');
     
     if (onMutedChange) {
-      onMutedChange(video.muted);
+      onMutedChange(newMutedState);
     }
   };
   
@@ -278,8 +402,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         <video
           ref={videoRef}
           preload="auto"
-          className="w-full h-auto"
-          onClick={handlePlayPause}
+          className="w-full h-auto cursor-pointer"
+          onClick={(e) => handlePlayPause(e)}
           playsInline
           poster={poster}
           data-has-interacted={hasInteracted ? 'true' : 'false'}
@@ -291,8 +415,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         {/* 재생 버튼 중앙 오버레이 */}
         {(!isPlaying || loading) && (
           <div
-            className="absolute inset-0 flex items-center justify-center cursor-pointer"
-            onClick={handlePlayPause}
+            className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
+            onClick={(e) => handlePlayPause(e)}
           >
             <div className="w-16 h-16 rounded-full bg-red-600/80 flex items-center justify-center">
               <svg
@@ -312,8 +436,8 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         )}
       </div>
 
-      {/* 컨트롤 영역 */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white p-2">
+      {/* 컨트롤 영역 - 비디오 아래에 위치하도록 수정 */}
+      <div className="bg-black text-white pt-2 pb-3 px-2">
         {/* 프로그레스 바 */}
         <ProgressBar
           progress={progress}
@@ -326,20 +450,30 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         {/* 타임라인 위 썸네일 미리보기 */}
         {previewTime !== null && thumbnailsLoaded && (
           <div
-            className="absolute bottom-10 bg-black border border-gray-700 shadow-lg z-20"
+            className="absolute bg-black border border-gray-700 shadow-lg z-20"
             style={{
               left: `${Math.min(Math.max(0, previewLeft - 80), progressBarRect.width - 160)}px`,
+              bottom: `${progressBarRef.current ? progressBarRef.current.clientHeight + 40 : 60}px`,
               transform: "translateX(0)",
             }}
           >
             {getThumbnailAt && (
               <div className="w-40 h-24 relative overflow-hidden bg-black/80">
-                {/* 썸네일 이미지 컨텐츠는 여기에 표시됩니다 */}
+                {/* 썸네일 이미지 - 특정 부분만 보여주도록 수정 */}
                 {previewTime !== null && getThumbnailAt(previewTime) && (
-                  <img
-                    src={getThumbnailAt(previewTime)?.url || ''}
-                    alt="thumbnail"
-                    className="w-full h-full object-cover"
+                  <div 
+                    className="absolute"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      overflow: 'hidden',
+                      backgroundImage: `url('${getThumbnailAt(previewTime)?.url || ''}')`,
+                      backgroundPositionX: `-${getThumbnailAt(previewTime)?.x || 0}px`,
+                      backgroundPositionY: `-${getThumbnailAt(previewTime)?.y || 0}px`,
+                      backgroundRepeat: 'no-repeat',
+                      transform: `scale(${160 / (getThumbnailAt(previewTime)?.width || 160)})`,
+                      transformOrigin: 'top left'
+                    }}
                   />
                 )}
               </div>
