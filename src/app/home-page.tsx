@@ -10,7 +10,7 @@ export const HomePage = () => {
     <Layout>
       <div className="flex flex-col items-center">
         <div className="w-full bg-gradient-to-r from-red-800 to-red-600 text-white p-12 mb-10 rounded-lg shadow-lg">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">NETFLEX2에 오신것을 환영합니다</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">NETFLEX2 에 오신것을 환영합니다</h1>
           <p className="text-xl mb-6">{user?.email}님, 최고의 영화들을 즐겨보세요</p>
           <Link to="/movies" className="bg-white text-red-700 hover:bg-gray-100 py-3 px-6 rounded font-bold inline-block">
             영화 보러가기
