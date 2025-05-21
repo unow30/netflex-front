@@ -349,7 +349,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="relative flex justify-center items-center">
+      <div className="relative flex justify-center items-center max-h-[calc(100vh-150px)] overflow-hidden">
         {poster && !videoStarted && (
           <div 
             className="absolute inset-0 z-5 bg-center bg-cover cursor-pointer"
@@ -361,7 +361,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
         <video
           ref={videoRef}
           preload="auto"
-          className="w-full h-auto cursor-pointer"
+          className="w-full h-auto max-h-[calc(100vh-180px)] object-contain cursor-pointer"
           onClick={(e) => handlePlayPause(e)}
           playsInline
           poster={poster}
@@ -374,7 +374,7 @@ export const HLSVideoPlayer: React.FC<Props> = ({
 
         {(!isPlaying || loading) && (
           <div
-            className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
+            className="absolute inset-0 flex items-center justify-center cursor-pointer z-10 max-h-screen overflow-hidden"
             onClick={(e) => handlePlayPause(e)}
           >
             <div className="w-16 h-16 rounded-full bg-red-600/80 flex items-center justify-center">
